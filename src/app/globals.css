@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Premium cream/pastel palette (matches homepage) */
+    --background: 45 35% 97%;
+    --foreground: 24 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 15% 10%;
+    /* Primary = warm terracotta */
+    --primary: 20 74% 52%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary = soft azure */
+    --secondary: 210 100% 95%;
+    --secondary-foreground: 24 15% 10%;
+    /* Muted = warm gray */
+    --muted: 35 25% 93%;
+    --muted-foreground: 28 8% 43%;
+    /* Accent = gold */
+    --accent: 43 96% 56%;
+    --accent-foreground: 24 15% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 35 22% 89%;
+    --input: 35 22% 89%;
+    --ring: 20 74% 52%;
+    --radius: 0.75rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  /* Make form controls and dashboard buttons feel consistent/premium */
+  .dashboard-theme button,
+  form button {
+    transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+  }
+
+  .dashboard-theme button:hover,
+  form button:hover {
+    transform: translateY(-1px);
+  }
+
+  .dashboard-theme input,
+  .dashboard-theme select,
+  .dashboard-theme textarea,
+  form input,
+  form select,
+  form textarea {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .gradient-azure {
+    background: linear-gradient(135deg, #0e8ee6 0%, #0358a0 100%);
+  }
+  .gradient-gold {
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  }
+  .gradient-premium {
+    background: linear-gradient(135deg, #0e8ee6 0%, #8b5cf6 50%, #d97706 100%);
+  }
+  .gradient-card {
+    background: linear-gradient(145deg, #ffffff 0%, #fdfaf6 100%);
+  }
+  .shadow-premium {
+    box-shadow: 0 4px 24px -2px rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.04);
+  }
+  .shadow-premium-lg {
+    box-shadow: 0 8px 40px -4px rgba(0,0,0,0.12), 0 4px 16px -4px rgba(0,0,0,0.06);
+  }
+  .shadow-gold {
+    box-shadow: 0 4px 24px -2px rgba(245,158,11,0.25);
+  }
+  .shadow-azure {
+    box-shadow: 0 4px 24px -2px rgba(14,142,230,0.25);
+  }
+  .text-gradient-azure {
+    background: linear-gradient(135deg, #0e8ee6, #0358a0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-premium {
+    background: linear-gradient(135deg, #0e8ee6, #8b5cf6, #d97706);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .glass-dark {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Shared premium hover lift */
+  .premium-hover {
+    transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
+  }
+
+  .premium-hover:hover {
+    transform: translateY(-2px);
+  }
+}
