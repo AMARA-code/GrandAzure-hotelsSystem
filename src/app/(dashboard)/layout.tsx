@@ -133,29 +133,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading) return <GrandLoader />
 
   return (
-    <div className="dashboard-theme min-h-screen bg-background overflow-x-hidden">
-
-      {/*
-        Topbar is NOW at the root level, rendered first.
-        z-40 ensures it always paints above the sidebar (z-30)
-        and its mobile backdrop (z-20).
-        The `sticky top-0` in Topbar.tsx keeps it pinned;
-        the z-40 here overrides whatever stacking context the
-        flex children would otherwise create.
-      */}
+    <div className="dashboard-theme min-h-screen bg-white overflow-x-hidden">
       <Topbar onMenuClick={() => setMobileOpen(p => !p)} />
 
-      {/*
-        Sidebar + main content sit in a flex row beneath the topbar.
-        The mobile drawer inside Sidebar uses `top: 56px` (fixed),
-        which now correctly aligns to the bottom edge of the topbar
-        because the topbar is rendered above this entire block.
-      */}
       <div className="flex min-h-[calc(100vh-56px)]">
-
         <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
 
-        {/* Main content — offset by desktop sidebar width on lg+ */}
         <div className="flex-1 flex flex-col transition-all duration-300 lg:ml-20 min-w-0">
           <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-4 sm:py-5 lg:px-6 lg:py-6 animate-fade-in">
             <div className="mx-auto w-full max-w-[1600px] min-w-0">
@@ -163,7 +146,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </main>
         </div>
-
       </div>
     </div>
   )

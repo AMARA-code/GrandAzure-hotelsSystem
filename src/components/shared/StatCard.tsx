@@ -47,7 +47,7 @@ export default function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: 'easeOut' }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className="relative bg-card rounded-2xl p-6 border border-border shadow-card hover:shadow-premium-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group premium-hover"
+      className="relative bg-white rounded-2xl p-6 border border-border shadow-card hover:shadow-premium-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group premium-hover"
     >
       {/* Top accent bar */}
       <div className={cn('absolute top-0 left-0 right-0 h-1 rounded-t-2xl', style.bar)} />

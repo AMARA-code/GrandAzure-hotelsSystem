@@ -46,15 +46,25 @@
 @layer base {
   :root {
     /* ─── Core semantic tokens ─── */
-    /* Page background: warm off-white from HomeLanding (#FAFAF7) */
-    --background:        45 30% 97%;
+
+    /*
+     * --background  →  bg-background  →  page canvas
+     * Changed from near-white (45 30% 97%) to the same warm cream used
+     * on the guest-portal HomeLanding (#FAF6EF ≈ HSL 38 44% 95%)
+     */
+    --background:        38 44% 95%;   /* #FAF6EF — warm cream */
     --foreground:        24 15% 10%;   /* #1C1917 */
 
-    /* Cards: pure white with warm tint */
-    --card:              0 0% 100%;
+    /*
+     * --card  →  bg-card  →  panel / card surfaces
+     * Shifted from pure white to a very light cream so cards feel
+     * warm without disappearing into the page background.
+     * #FDF9F4 ≈ HSL 38 67% 98%
+     */
+    --card:              38 67% 98%;   /* #FDF9F4 — lightest cream */
     --card-foreground:   24 15% 10%;
 
-    --popover:           0 0% 100%;
+    --popover:           38 67% 98%;
     --popover-foreground:24 15% 10%;
 
     /* Primary: terracotta #D4722A */
@@ -65,9 +75,12 @@
     --secondary:         38 60% 94%;
     --secondary-foreground:24 15% 10%;
 
-    /* Muted: stone-warm */
-    --muted:             35 20% 92%;
-    --muted-foreground:  28 8% 43%;   /* #78716C */
+    /*
+     * --muted  →  bg-muted  →  subtle tinted surfaces, hover states
+     * #F5EFE5 ≈ HSL 35 33% 93%
+     */
+    --muted:             35 33% 93%;   /* #F5EFE5 — slightly deeper cream */
+    --muted-foreground:  28 8% 43%;    /* #78716C */
 
     /* Accent: amber-gold (used sparingly for highlights, NOT as the main brand) */
     --accent:            38 92% 56%;
@@ -79,7 +92,7 @@
     /* Borders & inputs: warm light edge */
     --border:            35 20% 88%;
     --input:             35 20% 88%;
-    --ring:              20 74% 52%;  /* focus ring = brand terracotta */
+    --ring:              20 74% 52%;   /* focus ring = brand terracotta */
 
     --radius:            0.75rem;
   }
@@ -109,7 +122,7 @@
 
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden; /* prevent horizontal scroll */
+    overflow-x: hidden;
   }
 
   body {
@@ -118,7 +131,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "rlig" 1, "calt" 1;
-    overflow-x: hidden; /* prevent horizontal scroll */
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -146,7 +159,6 @@
   }
 
   /* ─── Scrollbar ─── */
-  /* height removed from shorthand to prevent permanent horizontal scrollbar */
   ::-webkit-scrollbar       { width: 6px; }
   ::-webkit-scrollbar-track { background: hsl(35 20% 93%); }
   ::-webkit-scrollbar-thumb { background: hsl(35 15% 75%); border-radius: 9999px; }
@@ -166,7 +178,7 @@
 @layer utilities {
   /* ── Gradients ── */
   .gradient-brand   { background: linear-gradient(135deg, #D4722A 0%, #C4621A 100%); }
-  .gradient-azure   { background: linear-gradient(135deg, #D4722A 0%, #C4621A 100%); } /* alias */
+  .gradient-azure   { background: linear-gradient(135deg, #D4722A 0%, #C4621A 100%); }
   .gradient-gold    { background: linear-gradient(135deg, #ECBC89 0%, #D4722A 100%); }
   .gradient-premium { background: linear-gradient(135deg, #D4722A 0%, #8b5cf6 50%, #d97706 100%); }
   .gradient-card    { background: linear-gradient(145deg, #ffffff 0%, #fdfaf6 100%); }
@@ -174,7 +186,7 @@
 
   /* ── Shadows ── */
   .shadow-brand     { box-shadow: 0 4px 24px -2px rgba(212, 114, 42, 0.28); }
-  .shadow-azure     { box-shadow: 0 4px 24px -2px rgba(212, 114, 42, 0.28); } /* alias */
+  .shadow-azure     { box-shadow: 0 4px 24px -2px rgba(212, 114, 42, 0.28); }
   .shadow-premium   { box-shadow: 0 4px 24px -2px rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.04); }
   .shadow-premium-lg{ box-shadow: 0 8px 40px -4px rgba(0,0,0,0.12), 0 4px 16px -4px rgba(0,0,0,0.06); }
   .shadow-gold      { box-shadow: 0 4px 24px -2px rgba(212, 114, 42, 0.22); }
@@ -186,7 +198,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .text-gradient-azure { /* alias */
+  .text-gradient-azure {
     background: linear-gradient(135deg, #D4722A, #B85E1E);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -233,16 +245,17 @@
   .premium-hover:hover { transform: translateY(-2px); }
 
   /* ── Section backgrounds matching HomeLanding ── */
-  .bg-page      { background-color: #FAFAF7; }
-  .bg-section   { background-color: #F7F4EF; }   /* alternate section tint */
-  .bg-card-warm { background-color: #ffffff; }
-  .bg-dark-cta  { background-color: #1C1917; }   /* dark CTA strip */
+  .bg-page      { background-color: #FAF6EF; }
+  .bg-section   { background-color: #F7F4EF; }
+  .bg-card-warm { background-color: #FDF9F4; }
+  .bg-dark-cta  { background-color: #1C1917; }
 
-  /* ── Pastel card palettes (used by HomeLanding room/review cards) ── */
+  /* ── Pastel card palettes ── */
   .card-terracotta { background: #FFF4ED; border-color: #F5C9A8; }
   .card-blue       { background: #EFF6FF; border-color: #BFDBFE; }
   .card-green      { background: #F0FDF4; border-color: #BBF7D0; }
   .card-purple     { background: #FDF4FF; border-color: #E9D5FF; }
   .card-orange     { background: #FFF7ED; border-color: #FED7AA; }
   .card-sky        { background: #F0F9FF; border-color: #BAE6FD; }
+
 }

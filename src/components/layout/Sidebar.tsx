@@ -19,7 +19,7 @@ function NavContent({ open, onLinkClick }: { open: boolean; onLinkClick?: () => 
   return (
     <>
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         {navigation.map((section) => (
           <div key={section.title}>
             <AnimatePresence>
@@ -89,7 +89,7 @@ function NavContent({ open, onLinkClick }: { open: boolean; onLinkClick?: () => 
       </nav>
 
       {/* Bottom */}
-      <div className="p-3 border-t border-border/80">
+      <div className="p-3 border-t border-border/80 shrink-0">
         <div
           className={cn(
             'rounded-xl p-3',
@@ -138,7 +138,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="hidden lg:flex fixed left-0 top-14 h-[calc(100vh-56px)] bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8] border-r border-border flex-col z-40 shadow-premium overflow-hidden"
+        className="hidden lg:flex fixed left-0 top-14 h-[calc(100vh-56px)] bg-white border-r border-border flex-col z-40 shadow-premium overflow-hidden"
       >
         <NavContent open={hovered} />
       </motion.aside>
@@ -147,11 +147,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       <AnimatePresence>
         {mobileOpen && (
           <>
-            {/*
-              Backdrop — starts at top-14 (56px) so the topbar stays
-              fully visible and clickable above it.
-              z-20 keeps it below the topbar (z-30).
-            */}
             <motion.div
               key="backdrop"
               initial={{ opacity: 0 }}
@@ -167,10 +162,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               }}
             />
 
-            {/*
-              Drawer — below the main topbar (top-14), no logo row (logo lives in desktop sidebar only).
-              z-40: above backdrop (z-30), below topbar (z-50).
-            */}
             <motion.aside
               key="drawer"
               initial={{ x: -288 }}
@@ -180,12 +171,12 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               className={cn(
                 'lg:hidden fixed left-0 top-14 bottom-0 z-40 flex w-[272px] flex-col overflow-hidden',
                 'border-r border-[#f0dfc0]',
-                'bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8]',
-                'backdrop-blur-md',
+                'bg-white',
                 'shadow-premium-lg'
               )}
             >
-              <div className="p-3 border-b border-[#f0dfc0]/90 bg-white/45 backdrop-blur-sm">
+              {/* Quick actions header */}
+              <div className="p-3 border-b border-[#f0dfc0]/90 bg-white shrink-0">
                 <div className="grid grid-cols-2 gap-2">
                   <Link
                     href="/bookings"
@@ -211,7 +202,11 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                   </Link>
                 </div>
               </div>
-              <NavContent open={true} onLinkClick={onMobileClose} />
+
+              {/* Scrollable nav area */}
+              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+                <NavContent open={true} onLinkClick={onMobileClose} />
+              </div>
             </motion.aside>
           </>
         )}
