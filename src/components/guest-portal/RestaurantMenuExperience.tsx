@@ -54,63 +54,14 @@ const PASTEL_CARDS = [
   { bg: '#F0F9FF', border: '#BAE6FD', accent: '#0284C7', tag: '#E0F2FE' },
 ]
 
-/* ─── Floating 3D Orb ────────────────────────────────────────────────────── */
-function FloatingOrb({ x, y, size, color, delay = 0 }: { x: string; y: string; size: number; color: string; delay?: number }) {
-  return (
-    <motion.div
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: color,
-        filter: 'blur(60px)',
-        opacity: 0.35,
-        pointerEvents: 'none',
-      }}
-      animate={{
-        y: [0, -30, 0, 20, 0],
-        x: [0, 15, -10, 0],
-        scale: [1, 1.08, 0.96, 1],
-      }}
-      transition={{
-        duration: 12 + delay * 2,
-        repeat: Infinity,
-        ease: 'easeInOut',
-        delay,
-      }}
-    />
-  )
-}
-
-/* ─── 3D Rotating Plate ─────────────────────────────────────────────────── */
-function RotatingPlate({ emoji, style }: { emoji: string; style?: React.CSSProperties }) {
-  return (
-    <motion.div
-      style={{
-        position: 'absolute',
-        fontSize: '3.5rem',
-        filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.18))',
-        transformStyle: 'preserve-3d',
-        ...style,
-      }}
-      animate={{
-        rotateY: [0, 15, -10, 0],
-        rotateX: [0, -10, 8, 0],
-        y: [0, -20, 10, 0],
-      }}
-      transition={{
-        duration: 7,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      }}
-    >
-      {emoji}
-    </motion.div>
-  )
-}
+/* ─── Hero Carousel Images ───────────────────────────────────────────────── */
+const HERO_IMAGES = [
+  '/images/carosoule/hero-1.jpg',
+  '/images/carosoule/hero-2.jpg',
+  '/images/carosoule/hero-3.jpg',
+  '/images/carosoule/hero-4.jpg',
+  '/images/carosoule/hero-5.jpg',
+]
 
 /* ─── Tilt Card ─────────────────────────────────────────────────────────── */
 function TiltCard({ children }: { children: React.ReactNode }) {
@@ -134,7 +85,7 @@ function TiltCard({ children }: { children: React.ReactNode }) {
   )
 }
 
-/* ─── Stat Counter ──────────────────────────────────────────────────────── */
+/* ─── Stat Badge ────────────────────────────────────────────────────────── */
 function StatBadge({ value, label, icon: Icon, palette }: { value: string; label: string; icon: any; palette: typeof PASTEL_CARDS[0] }) {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true })
@@ -144,302 +95,12 @@ function StatBadge({ value, label, icon: Icon, palette }: { value: string; label
       initial={{ opacity: 0, y: 24, scale: 0.9 }}
       animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
       transition={{ duration: 0.6, type: 'spring', stiffness: 200 }}
-      style={{
-        background: palette.bg,
-        border: `1.5px solid ${palette.border}`,
-        borderRadius: 20,
-        padding: '1.25rem 1rem',
-        textAlign: 'center',
-      }}
+      style={{ background: palette.bg, border: `1.5px solid ${palette.border}`, borderRadius: 20, padding: '1.25rem 1rem', textAlign: 'center' }}
     >
       <Icon style={{ width: 24, height: 24, color: palette.accent, margin: '0 auto 8px' }} />
       <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '1.8rem', fontWeight: 700, color: palette.accent }}>{value}</div>
       <div style={{ fontSize: '0.72rem', color: '#78716C', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{label}</div>
     </motion.div>
-  )
-}
-
-/* ─── Animated Clock ────────────────────────────────────────────────────── */
-function useTickingClock() {
-  const now = new Date()
-  const [tick, setTick] = useState({ s: now.getSeconds(), m: now.getMinutes(), h: now.getHours() % 12 })
-  useEffect(() => {
-    const id = setInterval(() => {
-      const d = new Date()
-      setTick({ s: d.getSeconds(), m: d.getMinutes(), h: d.getHours() % 12 })
-    }, 1000)
-    return () => clearInterval(id)
-  }, [])
-  return tick
-}
-
-function ClockFace() {
-  const { s, m, h } = useTickingClock()
-  const sDeg = s * 6
-  const mDeg = m * 6 + s * 0.1
-  const hDeg = h * 30 + m * 0.5
-
-  const cx = 60, cy = 60, R = 58
-  const toRad = (deg: number) => (deg - 90) * Math.PI / 180
-  const pt = (deg: number, r: number) => ({
-    x: cx + r * Math.cos(toRad(deg)),
-    y: cy + r * Math.sin(toRad(deg)),
-  })
-
-  // Arc helper: sweep from 0 to deg around center
-  const arc = (deg: number, r: number) => {
-    if (deg <= 0) return ''
-    const clamped = Math.min(deg, 359.9)
-    const end = pt(clamped, r)
-    const large = clamped > 180 ? 1 : 0
-    return `M ${cx} ${cy - r} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y}`
-  }
-
-  return (
-    <svg width="120" height="120" viewBox="0 0 120 120">
-      <defs>
-        <radialGradient id="clockBg" cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#FFFBF7" />
-          <stop offset="100%" stopColor="#FFF0E0" />
-        </radialGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="shadow">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="rgba(212,114,42,0.18)" />
-        </filter>
-      </defs>
-
-      {/* Face */}
-      <circle cx={cx} cy={cy} r={R} fill="url(#clockBg)" filter="url(#shadow)" />
-      <circle cx={cx} cy={cy} r={R} fill="none" stroke="#F5C9A8" strokeWidth="1.5" />
-
-      {/* Outer ornament ring — dotted */}
-      <circle cx={cx} cy={cy} r={R - 6} fill="none" stroke="rgba(212,114,42,0.12)" strokeWidth="0.8" strokeDasharray="1.5 4" />
-
-      {/* Hour arc track */}
-      <circle cx={cx} cy={cy} r={44} fill="none" stroke="rgba(212,114,42,0.08)" strokeWidth="4" strokeLinecap="round" />
-      {/* Hour arc fill */}
-      <path d={arc(hDeg, 44)} fill="none" stroke="rgba(212,114,42,0.35)" strokeWidth="4" strokeLinecap="round" />
-
-      {/* Minute arc track */}
-      <circle cx={cx} cy={cy} r={36} fill="none" stroke="rgba(212,114,42,0.06)" strokeWidth="3" strokeLinecap="round" />
-      {/* Minute arc fill */}
-      <path d={arc(mDeg, 36)} fill="none" stroke="#D4722A" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-
-      {/* Hour tick marks */}
-      {Array.from({ length: 60 }).map((_, i) => {
-        const isMajor = i % 5 === 0
-        const isQuarter = i % 15 === 0
-        const inner = isMajor ? (isQuarter ? R - 14 : R - 11) : R - 8
-        const outer = R - 3
-        const deg = i * 6
-        const p1 = pt(deg, inner), p2 = pt(deg, outer)
-        return (
-          <line key={i}
-            x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-            stroke={isQuarter ? '#D4722A' : isMajor ? 'rgba(212,114,42,0.55)' : 'rgba(212,114,42,0.2)'}
-            strokeWidth={isQuarter ? 2 : isMajor ? 1.2 : 0.7}
-            strokeLinecap="round"
-          />
-        )
-      })}
-
-      {/* Quarter dots */}
-      {[0, 90, 180, 270].map((deg) => {
-        const p = pt(deg, R - 10)
-        return <circle key={deg} cx={p.x} cy={p.y} r="2.5" fill="#D4722A" opacity="0.7" />
-      })}
-
-      {/* Hour hand */}
-      {(() => {
-        const tip = pt(hDeg, 24), tail = pt(hDeg + 180, 6)
-        return <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke="#1C1917" strokeWidth="3.5" strokeLinecap="round" filter="url(#glow)" />
-      })()}
-
-      {/* Minute hand */}
-      {(() => {
-        const tip = pt(mDeg, 33), tail = pt(mDeg + 180, 7)
-        return <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke="#D4722A" strokeWidth="2.5" strokeLinecap="round" filter="url(#glow)" />
-      })()}
-
-      {/* Second hand */}
-      {(() => {
-        const tip = pt(sDeg, 37), tail = pt(sDeg + 180, 10)
-        return (
-          <g style={{ transition: 'transform 0.15s linear' }}>
-            <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke="#EA580C" strokeWidth="1.2" strokeLinecap="round" />
-            <circle cx={pt(sDeg, 30).x} cy={pt(sDeg, 30).y} r="2" fill="#EA580C" />
-          </g>
-        )
-      })()}
-
-      {/* Center jewel */}
-      <circle cx={cx} cy={cy} r="5.5" fill="#D4722A" filter="url(#glow)" />
-      <circle cx={cx} cy={cy} r="3" fill="#FFF4ED" />
-      <circle cx={cx - 1} cy={cy - 1} r="1" fill="rgba(255,255,255,0.8)" />
-    </svg>
-  )
-}
-
-/* ─── Floating Particle ─────────────────────────────────────────────────── */
-function Particle({ x, y, size, color, delay }: { x: string; y: string; size: number; color: string; delay: number }) {
-  return (
-    <motion.div
-      style={{ position: 'absolute', left: x, top: y, width: size, height: size, borderRadius: '50%', background: color, pointerEvents: 'none', zIndex: 0 }}
-      animate={{ y: [0, -16, 5, -9, 0], x: [0, 5, -3, 2, 0], opacity: [0.45, 0.9, 0.55, 0.85, 0.45], scale: [1, 1.25, 0.85, 1.1, 1] }}
-      transition={{ duration: 7 + delay * 1.5, repeat: Infinity, ease: 'easeInOut', delay }}
-    />
-  )
-}
-
-/* ─── Hero Right Panel ──────────────────────────────────────────────────── */
-function HeroRightPanel({ restaurant }: { restaurant?: { restaurant_name: string; cuisine_type: string | null; open_time: string | null; close_time: string | null; hotel_name?: string; city?: string } }) {
-  const [activeIdx, setActiveIdx] = useState(0)
-
-  const HIGHLIGHTS = [
-    { emoji: '🍖', label: 'Slow-Roasted Lamb',     sub: 'Signature · 4 hrs',  palette: PASTEL_CARDS[0] },
-    { emoji: '🐟', label: 'Pan-Seared Sea Bass',   sub: "Chef's Choice",       palette: PASTEL_CARDS[1] },
-    { emoji: '🍄', label: 'Wild Mushroom Risotto',  sub: 'Vegetarian',          palette: PASTEL_CARDS[2] },
-    { emoji: '🥩', label: 'Truffle Tenderloin',     sub: 'Signature · Rare',   palette: PASTEL_CARDS[3] },
-  ]
-  useEffect(() => {
-    const id = setInterval(() => setActiveIdx(i => (i + 1) % HIGHLIGHTS.length), 3200)
-    return () => clearInterval(id)
-  }, [])
-
-  const isOpen = (() => {
-    if (!restaurant?.open_time || !restaurant?.close_time) return true
-    const now = new Date()
-    const [oh, om] = restaurant.open_time.split(':').map(Number)
-    const [ch, cm] = restaurant.close_time.split(':').map(Number)
-    const cur = now.getHours() * 60 + now.getMinutes()
-    return cur >= oh * 60 + om && cur <= ch * 60 + cm
-  })()
-
-  const cuisineTags = restaurant?.cuisine_type
-    ? restaurant.cuisine_type.split(',').map((s: string) => s.trim()).filter(Boolean)
-    : ['Continental', 'Asian Fusion', 'Grill']
-
-  const PARTICLES = [
-    { x: '6%',  y: '10%', size: 7,  color: '#FDE8D4', delay: 0   },
-    { x: '88%', y: '16%', size: 9,  color: '#DBEAFE', delay: 1   },
-    { x: '18%', y: '80%', size: 6,  color: '#DCFCE7', delay: 2   },
-    { x: '78%', y: '74%', size: 8,  color: '#F3E8FF', delay: 0.5 },
-    { x: '52%', y: '4%',  size: 5,  color: '#FED7AA', delay: 1.5 },
-    { x: '93%', y: '48%', size: 5,  color: '#FDE8D4', delay: 2.5 },
-    { x: '3%',  y: '50%', size: 7,  color: '#DCFCE7', delay: 3   },
-    { x: '62%', y: '90%', size: 6,  color: '#DBEAFE', delay: 1.2 },
-  ]
-
-  return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
-      {PARTICLES.map((p, i) => <Particle key={i} {...p} />)}
-
-      {/* Ambient glow */}
-      <motion.div
-        animate={{ scale: [1, 1.07, 0.96, 1], opacity: [0.35, 0.52, 0.38, 0.35] }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', top: '15%', left: '10%', right: '10%', bottom: '15%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,201,168,0.38) 0%, rgba(219,234,254,0.14) 60%, transparent 80%)', filter: 'blur(32px)', pointerEvents: 'none', zIndex: 0 }}
-      />
-
-      {/* Outer dashed ring */}
-      <motion.div animate={{ rotate: 360 }} transition={{ duration: 42, repeat: Infinity, ease: 'linear' }} style={{ position: 'absolute', top: '50%', left: '50%', width: 330, height: 330, marginTop: -165, marginLeft: -165, borderRadius: '50%', border: '1.5px dashed rgba(212,114,42,0.14)', pointerEvents: 'none', zIndex: 0 }} />
-      <motion.div animate={{ rotate: -360 }} transition={{ duration: 27, repeat: Infinity, ease: 'linear' }} style={{ position: 'absolute', top: '50%', left: '50%', width: 220, height: 220, marginTop: -110, marginLeft: -110, borderRadius: '50%', border: '1px dotted rgba(212,114,42,0.10)', pointerEvents: 'none', zIndex: 0 }} />
-
-      {/* ── Row 1: Clock + Open status ── */}
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 12, marginBottom: 12, alignItems: 'stretch' }}>
-
-        {/* Clock */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
-          style={{ background: '#FFF4ED', border: '1.5px solid #F5C9A8', borderRadius: 20, padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 20px rgba(212,114,42,0.10)', flexShrink: 0 }}
-        >
-          <ClockFace />
-          <div style={{ fontSize: '0.58rem', fontWeight: 700, color: '#D4722A', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
-            {restaurant?.open_time && restaurant?.close_time ? `${restaurant.open_time} – ${restaurant.close_time}` : 'Open Daily'}
-          </div>
-        </motion.div>
-
-        {/* Open/Closed — fills remaining height */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.45 }}
-          style={{ background: isOpen ? '#F0FDF4' : '#FFF1F2', border: `1.5px solid ${isOpen ? '#BBF7D0' : '#FECDD3'}`, borderRadius: 20, padding: '20px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12, flex: 1 }}
-        >
-          {/* Pulsing status dot + label */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ position: 'relative', width: 12, height: 12, flexShrink: 0 }}>
-              <motion.div
-                animate={{ scale: [1, 2.2, 1], opacity: [0.6, 0, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: isOpen ? '#22C55E' : '#F43F5E' }}
-              />
-              <div style={{ position: 'absolute', inset: 2, borderRadius: '50%', background: isOpen ? '#22C55E' : '#F43F5E' }} />
-            </div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: isOpen ? '#15803D' : '#BE123C' }}>
-              {isOpen ? 'Currently Open' : 'Currently Closed'}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.7rem', color: '#78716C', lineHeight: 1.5 }}>
-            <strong style={{ color: '#1C1917', display: 'block', marginBottom: 2 }}>{restaurant?.restaurant_name ?? 'Grand Azure Restaurant'}</strong>
-            {restaurant?.hotel_name && <span style={{ display: 'block' }}>{restaurant.hotel_name}</span>}
-            {restaurant?.city && <span style={{ color: '#D4722A' }}>📍 {restaurant.city}</span>}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── Row 2: Rotating spotlight ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.7 }}
-        style={{ position: 'relative', zIndex: 1, background: HIGHLIGHTS[activeIdx].palette.bg, border: `1.5px solid ${HIGHLIGHTS[activeIdx].palette.border}`, borderRadius: 20, padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, boxShadow: `0 4px 24px ${HIGHLIGHTS[activeIdx].palette.border}`, transition: 'background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease', overflow: 'hidden' }}
-      >
-        {/* Shimmer sweep */}
-        <motion.div
-          animate={{ x: ['-100%', '220%'] }}
-          transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.6, ease: 'easeInOut' }}
-          style={{ position: 'absolute', top: 0, left: 0, width: '38%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent)', pointerEvents: 'none', zIndex: 0 }}
-        />
-        <AnimatePresence mode="wait">
-          <motion.div key={activeIdx} initial={{ scale: 0.5, opacity: 0, rotate: -18 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} exit={{ scale: 0.5, opacity: 0, rotate: 18 }} transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }} style={{ fontSize: '2.6rem', flexShrink: 0, zIndex: 1 }}>
-            {HIGHLIGHTS[activeIdx].emoji}
-          </motion.div>
-        </AnimatePresence>
-        <div style={{ zIndex: 1, flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.57rem', fontWeight: 700, color: HIGHLIGHTS[activeIdx].palette.accent, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 3 }}>Chef's Spotlight</div>
-          <AnimatePresence mode="wait">
-            <motion.div key={activeIdx + 'l'} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.32 }} style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '0.98rem', fontWeight: 600, color: '#1C1917', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {HIGHLIGHTS[activeIdx].label}
-            </motion.div>
-          </AnimatePresence>
-          <div style={{ fontSize: '0.62rem', color: '#78716C', marginTop: 3 }}>{HIGHLIGHTS[activeIdx].sub}</div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, zIndex: 1 }}>
-          {HIGHLIGHTS.map((_, i) => (
-            <motion.div key={i} animate={{ scale: i === activeIdx ? 1 : 0.65, opacity: i === activeIdx ? 1 : 0.3 }} style={{ width: 6, height: 6, borderRadius: '50%', background: HIGHLIGHTS[activeIdx].palette.accent }} />
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ── Row 3: Real cuisine tags + city ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.9 }}
-        style={{ position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', gap: 7 }}
-      >
-        {cuisineTags.map((tag: string, i: number) => (
-          <motion.div key={tag} initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.95 + i * 0.08, type: 'spring', stiffness: 280 }} whileHover={{ y: -2, scale: 1.06 }}
-            style={{ background: PASTEL_CARDS[i % PASTEL_CARDS.length].bg, border: `1.5px solid ${PASTEL_CARDS[i % PASTEL_CARDS.length].border}`, borderRadius: 999, padding: '5px 13px', fontSize: '0.68rem', fontWeight: 600, color: PASTEL_CARDS[i % PASTEL_CARDS.length].accent }}>
-            {tag}
-          </motion.div>
-        ))}
-        {restaurant?.city && (
-          <motion.div initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.1, type: 'spring', stiffness: 280 }} whileHover={{ y: -2 }}
-            style={{ background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 999, padding: '5px 13px', fontSize: '0.68rem', fontWeight: 600, color: '#EA580C', display: 'flex', alignItems: 'center', gap: 5 }}>
-            📍 {restaurant.city}
-          </motion.div>
-        )}
-      </motion.div>
-    </div>
   )
 }
 
@@ -459,6 +120,13 @@ export default function RestaurantMenuExperience({
   restaurants: RestaurantType[]
   guestId: number | null
 }) {
+  /* ── Hero carousel ── */
+  const [heroImg, setHeroImg] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setHeroImg(i => (i + 1) % HERO_IMAGES.length), 6500)
+    return () => clearInterval(id)
+  }, [])
+
   const [restaurantId, setRestaurantId] = useState<number>(restaurants[0]?.restaurant_id ?? 0)
   const [orderType, setOrderType] = useState<OrderType>('dine_in')
   const [tableNo, setTableNo] = useState('')
@@ -470,12 +138,9 @@ export default function RestaurantMenuExperience({
   const [cart, setCart] = useState<Record<string, CartLine>>({})
   const heroRef = useRef<HTMLDivElement>(null)
   const { scrollY } = useScroll()
-  const heroParallaxY = useTransform(scrollY, [0, 400], [0, 80])
+  const heroParallaxY = useTransform(scrollY, [0, 400], [0, 60])
 
-  const allCategories = useMemo(
-    () => [{ id: 'all', name: 'All', items: [] as MenuItem[] }, ...DEFAULT_MENU.categories],
-    []
-  )
+  const allCategories = useMemo(() => [{ id: 'all', name: 'All', items: [] as MenuItem[] }, ...DEFAULT_MENU.categories], [])
   const categoriesToRender = useMemo(() => {
     if (activeCategoryId === 'all') return DEFAULT_MENU.categories
     return DEFAULT_MENU.categories.filter((cat) => cat.id === activeCategoryId)
@@ -488,17 +153,9 @@ export default function RestaurantMenuExperience({
   const total = subtotal + serviceCharge + tax
   const totalItems = cartLines.reduce((s, l) => s + l.qty, 0)
 
-  const addItem = (item: MenuItem) =>
-    setCart((p) => ({ ...p, [item.id]: { item, qty: (p[item.id]?.qty ?? 0) + 1 } }))
-  const decItem = (id: string) =>
-    setCart((p) => {
-      const e = p[id]
-      if (!e) return p
-      if (e.qty <= 1) { const { [id]: _, ...r } = p; return r }
-      return { ...p, [id]: { ...e, qty: e.qty - 1 } }
-    })
-  const incItem = (id: string) =>
-    setCart((p) => p[id] ? { ...p, [id]: { ...p[id], qty: p[id].qty + 1 } } : p)
+  const addItem = (item: MenuItem) => setCart((p) => ({ ...p, [item.id]: { item, qty: (p[item.id]?.qty ?? 0) + 1 } }))
+  const decItem = (id: string) => setCart((p) => { const e = p[id]; if (!e) return p; if (e.qty <= 1) { const { [id]: _, ...r } = p; return r }; return { ...p, [id]: { ...e, qty: e.qty - 1 } } })
+  const incItem = (id: string) => setCart((p) => p[id] ? { ...p, [id]: { ...p[id], qty: p[id].qty + 1 } } : p)
   const clearCart = () => setCart({})
 
   const placeOrder = async () => {
@@ -508,11 +165,9 @@ export default function RestaurantMenuExperience({
     setSubmitting(true)
     try {
       const payload: any = {
-        restaurant_id: restaurantId,
-        order_type: orderType,
+        restaurant_id: restaurantId, order_type: orderType,
         table_no: orderType === 'dine_in' ? tableNo : null,
-        total_amount: String(total),
-        charged_to_room: chargedToRoom,
+        total_amount: String(total), charged_to_room: chargedToRoom,
         notes: JSON.stringify({ guestNotes: notes || null, breakdown: { subtotal, serviceCharge, tax, total }, items: cartLines.map((l) => ({ id: l.item.id, name: l.item.name, qty: l.qty, unitPrice: l.item.price, lineTotal: l.item.price * l.qty })) }),
         taken_by: 1, status: 'pending', guest_id: guestId,
       }
@@ -542,81 +197,297 @@ export default function RestaurantMenuExperience({
 
         .serif { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; line-height: 1.12; letter-spacing: -0.02em; color: #1C1917; }
 
-        /* ── HERO ── */
+        /* ══ HERO ══ */
         .hero-wrapper {
           position: relative;
           overflow: hidden;
-          padding: 1.75rem 0 1.75rem;
-          background: linear-gradient(135deg, #FDF6EE 0%, #FEF0E6 25%, #FDF4FF 55%, #EFF8FF 80%, #F0FDF6 100%);
-          min-height: auto;
+          min-height: 100vh;
           display: flex;
           align-items: center;
+          background: #08050200;
         }
-        @media (min-width: 640px) { .hero-wrapper { padding: 2.25rem 0 2rem; } }
-        @media (min-width: 768px) { .hero-wrapper { padding: 3rem 0 2.5rem; min-height: 520px; } }
-        @media (min-width: 900px) { .hero-wrapper { padding: 3.5rem 0 3rem; min-height: 580px; } }
+        @media (min-width: 768px) { .hero-wrapper { min-height: 100vh; } }
 
-        /* Grain texture overlay */
-        .hero-wrapper::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-          opacity: 0.55;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        /* Diagonal editorial lines */
-        .hero-wrapper::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background-image: repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 56px,
-            rgba(212,114,42,0.018) 56px,
-            rgba(212,114,42,0.018) 57px
+        /* Layered overlays for depth */
+        .hero-ov-base {
+          position: absolute; inset: 0;
+          background: linear-gradient(
+            to right,
+            rgba(5,3,2,0.82) 0%,
+            rgba(5,3,2,0.55) 38%,
+            rgba(5,3,2,0.18) 68%,
+            rgba(5,3,2,0.42) 100%
           );
-          pointer-events: none;
-          z-index: 0;
+          z-index: 1;
+        }
+        .hero-ov-bottom {
+          position: absolute; inset: 0;
+          background: linear-gradient(
+            to top,
+            rgba(5,3,2,0.88) 0%,
+            rgba(5,3,2,0.38) 22%,
+            transparent 50%
+          );
+          z-index: 2;
+        }
+        .hero-ov-top {
+          position: absolute; inset: 0;
+          background: linear-gradient(
+            to bottom,
+            rgba(5,3,2,0.52) 0%,
+            transparent 28%
+          );
+          z-index: 2;
+        }
+        .hero-grain {
+          position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.38;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
         }
 
-        /* Hero two-column layout */
+        /* Horizontal divider line — purely decorative */
+        .hero-rule {
+          display: none;
+          position: absolute;
+          top: 50%;
+          right: 0;
+          width: 28%;
+          height: 1px;
+          background: linear-gradient(to left, transparent, rgba(196,137,74,0.22));
+          z-index: 4;
+        }
+        @media (min-width: 900px) { .hero-rule { display: block; } }
+
+        /* Inner layout */
         .hero-inner {
+          position: relative;
+          z-index: 5;
+          width: 100%;
+          padding: 7rem 0 6rem;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
-          position: relative;
-          z-index: 2;
-          width: 100%;
+          gap: 0;
         }
         @media (min-width: 900px) {
-          .hero-inner { flex-direction: row; align-items: center; gap: 2.5rem; }
-          .hero-left { flex: 0 0 52%; }
-          .hero-right { flex: 1; align-items: center; }
+          .hero-inner {
+            flex-direction: row;
+            align-items: center;
+            padding: 8rem 0 6rem;
+          }
+          .hero-left  { flex: 0 0 58%; }
+          .hero-right { flex: 1; display: flex !important; justify-content: flex-end; padding-right: 1rem; }
         }
-
-        /* Hide hero right panel on very small screens */
         .hero-right { display: none; }
-        @media (min-width: 560px) { .hero-right { display: flex; justify-content: center; align-items: center; position: relative; } }
 
-        /* Decorative divider */
-        .hero-divider {
-          width: 48px;
-          height: 2px;
-          background: linear-gradient(to right, #D4722A, transparent);
-          margin: 0.75rem 0;
+        /* Eyebrow */
+        .hero-eyebrow {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 1.6rem;
         }
-        @media (min-width: 768px) { .hero-divider { margin: 1rem 0; } }
+        .hero-eyebrow-line {
+          width: 32px;
+          height: 1px;
+          background: #C4894A;
+          flex-shrink: 0;
+        }
+        .hero-eyebrow-text {
+          font-size: 0.6rem;
+          letter-spacing: 0.26em;
+          text-transform: uppercase;
+          color: #C4894A;
+          font-weight: 500;
+        }
 
-        /* Controls card */
+        /* Headline */
+        .hero-h1 {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: clamp(3rem, 7vw, 5.2rem);
+          line-height: 1.0;
+          font-weight: 400;
+          letter-spacing: -0.025em;
+          color: #F2EAD8;
+          display: block;
+          margin-bottom: 0.04em;
+        }
+        .hero-h1-italic {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: clamp(3rem, 7vw, 5.2rem);
+          line-height: 1.0;
+          font-weight: 400;
+          font-style: italic;
+          letter-spacing: -0.025em;
+          color: #C4894A;
+          display: block;
+          text-shadow: 0 0 60px rgba(196,137,74,0.28);
+        }
+
+        .hero-divider {
+          width: 44px;
+          height: 1px;
+          background: rgba(196,137,74,0.4);
+          margin: 1.6rem 0;
+        }
+
+        .hero-sub {
+          font-size: clamp(0.82rem, 1.6vw, 0.92rem);
+          color: rgba(242,234,216,0.58);
+          line-height: 1.95;
+          max-width: 360px;
+          font-weight: 300;
+          letter-spacing: 0.01em;
+          margin-bottom: 2rem;
+        }
+
+        /* CTA buttons */
+        .hero-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: #C4894A;
+          color: #1a0e05;
+          border: none;
+          padding: 14px 32px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 0.75rem;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          border-radius: 2px;
+          cursor: pointer;
+          transition: background 0.22s, transform 0.18s;
+        }
+        .hero-btn-primary:hover { background: #d49a5e; transform: translateY(-2px); }
+
+        .hero-btn-ghost {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: none;
+          border: 1px solid rgba(196,137,74,0.38);
+          color: rgba(242,234,216,0.68);
+          padding: 14px 28px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 0.75rem;
+          font-weight: 400;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          border-radius: 2px;
+          cursor: pointer;
+          transition: border-color 0.22s, color 0.22s, transform 0.18s;
+        }
+        .hero-btn-ghost:hover {
+          border-color: rgba(196,137,74,0.75);
+          color: rgba(242,234,216,0.95);
+          transform: translateY(-2px);
+        }
+
+        /* Dot nav */
+        .hero-dots {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 3rem;
+        }
+
+        /* Bottom meta bar */
+        .hero-meta-bar {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 6;
+          border-top: 1px solid rgba(196,137,74,0.10);
+          padding: 1.2rem 2.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          background: rgba(5,3,2,0.28);
+          backdrop-filter: blur(8px);
+        }
+        @media (max-width: 640px) {
+          .hero-meta-bar { padding: 1rem 1.25rem; }
+          .hero-meta-right { display: none; }
+        }
+
+        .hero-meta-stat {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .hero-meta-label {
+          font-size: 0.5rem;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: rgba(196,137,74,0.52);
+          font-weight: 500;
+        }
+        .hero-meta-value {
+          font-size: 0.72rem;
+          color: rgba(242,234,216,0.68);
+          font-weight: 300;
+        }
+        .hero-meta-sep {
+          width: 1px;
+          height: 26px;
+          background: rgba(196,137,74,0.16);
+          flex-shrink: 0;
+        }
+
+        /* Right panel — open/cuisine info */
+        .hero-info-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          align-items: flex-end;
+        }
+        .hero-status-card {
+          background: rgba(5,3,2,0.55);
+          border: 1px solid rgba(196,137,74,0.18);
+          border-radius: 4px;
+          padding: 18px 22px;
+          backdrop-filter: blur(12px);
+          min-width: 200px;
+        }
+        .hero-vertical-tag {
+          writing-mode: vertical-rl;
+          text-orientation: mixed;
+          font-size: 0.52rem;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: rgba(196,137,74,0.55);
+          padding: 16px 8px;
+          border: 1px solid rgba(196,137,74,0.14);
+          border-radius: 2px;
+          white-space: nowrap;
+        }
+
+        /* Scroll indicator */
+        .hero-scroll {
+          position: absolute;
+          bottom: 5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 6;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+        @media (max-width: 640px) { .hero-scroll { display: none; } }
+        .hero-scroll-text {
+          font-size: 0.48rem;
+          letter-spacing: 0.24em;
+          text-transform: uppercase;
+          color: rgba(196,137,74,0.42);
+        }
+
+        /* ── Controls card ── */
         .controls-card { background: #fff; border: 1.5px solid #E7E3DC; border-radius: 18px; padding: 1.25rem; box-shadow: 0 4px 32px rgba(28,25,23,0.06); }
         @media (min-width: 640px) { .controls-card { padding: 1.5rem; border-radius: 20px; } }
         @media (min-width: 768px) { .controls-card { padding: 2rem; border-radius: 24px; } }
 
-        /* Order type pills — stack to 1 col on very small screens */
         .order-pills-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
         @media (min-width: 400px) { .order-pills-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
 
@@ -630,195 +501,326 @@ export default function RestaurantMenuExperience({
         .order-pill-desc { font-size: 0.68rem; color: #A8A29E; }
         @media (min-width: 400px) { .order-pill-desc { font-size: 0.62rem; margin-top: 2px; } }
 
-        /* Stats strip — 2×2 on mobile, 4-across on md+ */
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 560px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
 
-        /* Category tabs */
         .cat-bar { position: sticky; top: 0; z-index: 20; background: rgba(250,250,247,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #E7E3DC; padding: 0.65rem 0; }
         .cat-btn { white-space: nowrap; border-radius: 999px; padding: 0.4rem 0.9rem; font-size: 0.75rem; font-weight: 600; border: 1.5px solid #E7E3DC; background: #fff; color: #78716C; cursor: pointer; transition: all 0.2s; }
         @media (min-width: 640px) { .cat-btn { padding: 0.45rem 1.1rem; font-size: 0.8rem; } }
         .cat-btn:hover { border-color: #F5C9A8; color: #D4722A; }
         .cat-btn.active { background: #1C1917; border-color: #1C1917; color: #F5ECD5; box-shadow: 0 4px 16px rgba(28,25,23,0.22); }
 
-        /* Cart FAB — compact on mobile */
         .cart-fab { position: fixed; bottom: 1.25rem; right: 1rem; z-index: 30; display: flex; align-items: center; gap: 8px; background: #1C1917; color: #F5ECD5; padding: 0.75rem 1.1rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; box-shadow: 0 8px 32px rgba(28,25,23,0.28); cursor: pointer; border: none; transition: all 0.22s; }
         .cart-fab:hover { background: #D4722A; transform: translateY(-3px); box-shadow: 0 12px 36px rgba(212,114,42,0.4); }
         @media (min-width: 640px) { .cart-fab { bottom: 1.75rem; right: 1.25rem; padding: 0.85rem 1.4rem; font-size: 0.82rem; } }
         @media (min-width: 768px) { .cart-fab { bottom: 2.5rem; right: 2.5rem; } }
 
-        /* Food cards grid */
         .menu-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
         @media (min-width: 480px) { .menu-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; } }
         @media (min-width: 1024px) { .menu-grid { grid-template-columns: repeat(3, 1fr); } }
 
-        /* Input / select */
         .field { width: 100%; border: 1.5px solid #E7E3DC; border-radius: 12px; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-family: inherit; color: #1C1917; background: #FAFAF7; outline: none; transition: border-color 0.18s; }
         .field:focus { border-color: #D4722A; background: #fff; }
 
-        /* Dine-in sub-fields — stack on small screens */
         .dinein-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media (min-width: 480px) { .dinein-grid { grid-template-columns: 1fr 1fr; gap: 12px; } }
 
-        /* Cart drawer */
         .cart-sheet { background: #FAFAF7; border-radius: 24px 24px 0 0; overflow: hidden; width: 100%; max-width: 480px; }
         @media (min-width: 640px) { .cart-sheet { border-radius: 24px; } }
 
-        /* Private dining card */
-        .private-card {
-          border-radius: 20px;
-          overflow: hidden;
-          position: relative;
-          background: linear-gradient(135deg, #FFF4ED 0%, #FDF0FF 100%);
-          border: 1.5px solid #F5C9A8;
-        }
+        .private-card { border-radius: 20px; overflow: hidden; position: relative; background: linear-gradient(135deg, #FFF4ED 0%, #FDF0FF 100%); border: 1.5px solid #F5C9A8; }
         @media (min-width: 768px) { .private-card { border-radius: 28px; } }
 
-        /* ── Unified Add-to-order button ── */
-        .btn-add {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: #D4722A;
-          color: #fff;
-          border: none;
-          border-radius: 10px;
-          padding: 0.5rem 1.1rem;
-          font-size: 0.78rem;
-          font-weight: 700;
-          cursor: pointer;
-          box-shadow: 0 4px 14px rgba(212,114,42,0.30);
-          transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
-          font-family: inherit;
-        }
+        .btn-add { display: inline-flex; align-items: center; gap: 6px; background: #D4722A; color: #fff; border: none; border-radius: 10px; padding: 0.5rem 1.1rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(212,114,42,0.30); transition: background 0.18s, box-shadow 0.18s, transform 0.12s; font-family: inherit; }
         .btn-add:hover { background: #B85E20; box-shadow: 0 6px 20px rgba(212,114,42,0.45); }
         .btn-add:active { transform: scale(0.97); }
       `}</style>
 
-      {/* ── HERO ── */}
+      {/* ══════════════════ HERO ══════════════════ */}
       <section className="hero-wrapper" ref={heroRef}>
-        {/* Very subtle warm orbs — far less saturated than before */}
-        <FloatingOrb x="60%" y="-10%" size={380} color="radial-gradient(circle, rgba(245,201,168,0.4), rgba(253,232,212,0.15))" delay={0} />
-        <FloatingOrb x="-10%" y="40%" size={300} color="radial-gradient(circle, rgba(219,234,254,0.3), rgba(237,233,254,0.1))" delay={3} />
-        <FloatingOrb x="75%" y="60%" size={240} color="radial-gradient(circle, rgba(220,252,231,0.25), transparent)" delay={5} />
 
-        <div className="pg">
+        {/* ── Background image crossfade carousel ── */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={heroImg}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.6, ease: [0.45, 0, 0.55, 1] }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url('${HERO_IMAGES[heroImg]}')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center 30%',
+                willChange: 'opacity',
+              }}
+            />
+          </AnimatePresence>
+        </div>
+
+        {/* ── Overlay layers ── */}
+        <div className="hero-ov-base" />
+        <div className="hero-ov-bottom" />
+        <div className="hero-ov-top" />
+        <div className="hero-grain" />
+        <div className="hero-rule" />
+
+        {/* ── Content ── */}
+        <div className="pg" style={{ width: '100%' }}>
           <div className="hero-inner">
 
-            {/* ── LEFT: Heading + badges ── */}
+            {/* LEFT — Headline + CTA */}
             <div className="hero-left">
               <motion.div style={{ y: heroParallaxY }}>
 
                 {/* Eyebrow */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ duration: 0.5, type: 'spring', stiffness: 200 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1.25rem' }}
+                  className="hero-eyebrow"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <div style={{ width: 32, height: 1.5, background: '#D4722A', borderRadius: 2 }} />
-                  <span style={{ fontSize: '0.67rem', fontWeight: 700, color: '#D4722A', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-                    Culinary Excellence
+                  <div className="hero-eyebrow-line" />
+                  <span className="hero-eyebrow-text">
+                    {activeRestaurant?.cuisine_type ?? 'Culinary Excellence'} · Est. 2008
                   </span>
                 </motion.div>
 
-                {/* Main heading with stagger */}
+                {/* Headline */}
                 <motion.div
                   initial="hidden"
                   animate="visible"
-                  variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
+                  variants={{ visible: { transition: { staggerChildren: 0.16 } } }}
                 >
                   {['Dine Where', 'Flavours Live'].map((line, i) => (
                     <motion.div
                       key={i}
                       variants={{
-                        hidden: { opacity: 0, y: 40, skewY: 4 },
+                        hidden: { opacity: 0, y: 52, skewY: 4 },
                         visible: { opacity: 1, y: 0, skewY: 0 },
                       }}
-                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                      transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <h1 className="serif" style={{ fontSize: 'clamp(2.4rem, 6vw, 4.2rem)', marginBottom: '0.06em', lineHeight: 1.05 }}>
-                        {i === 1 ? <em style={{ color: '#D4722A', fontStyle: 'italic' }}>{line}</em> : line}
-                      </h1>
+                      {i === 0
+                        ? <span className="hero-h1">{line}</span>
+                        : <span className="hero-h1-italic">{line}</span>
+                      }
                     </motion.div>
                   ))}
                 </motion.div>
 
-                {/* Decorative divider */}
-                <div className="hero-divider" />
+                {/* Divider */}
+                <motion.div
+                  className="hero-divider"
+                  initial={{ opacity: 0, scaleX: 0 }}
+                  animate={{ opacity: 1, scaleX: 1 }}
+                  style={{ transformOrigin: 'left' }}
+                  transition={{ duration: 0.7, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                />
 
-                {/* Sub */}
+                {/* Subline */}
                 <motion.p
+                  className="hero-sub"
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.45 }}
-                  style={{ fontSize: 'clamp(0.83rem, 2vw, 0.96rem)', color: '#78716C', lineHeight: 1.85, maxWidth: 420, marginBottom: '1.75rem' }}
+                  transition={{ duration: 0.7, delay: 0.72, ease: [0.22, 1, 0.36, 1] }}
                 >
                   {activeRestaurant
                     ? `${activeRestaurant.restaurant_name} · ${activeRestaurant.hotel_name} · ${activeRestaurant.city}`
-                    : 'Curated menus, premium service, seamless ordering across all our properties.'}
+                    : 'Curated menus, premium service, and seamless ordering across all our properties.'
+                  }
                 </motion.p>
 
-                {/* Feature badges */}
+                {/* CTAs */}
                 <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  variants={{ visible: { transition: { staggerChildren: 0.1, delayChildren: 0.55 } } }}
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.88, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
                 >
-                  {[
-                    { icon: Award, label: 'Award-Winning Chefs', color: '#D4722A', bg: '#FDE8D4', border: '#F5C9A8' },
-                    { icon: Leaf, label: 'Farm-to-Table', color: '#16A34A', bg: '#DCFCE7', border: '#BBF7D0' },
-                    { icon: Sparkles, label: 'Curated Pairings', color: '#9333EA', bg: '#F3E8FF', border: '#E9D5FF' },
-                  ].map((b) => (
-                    <motion.div
-                      key={b.label}
-                      variants={{ hidden: { opacity: 0, y: 12, scale: 0.9 }, visible: { opacity: 1, y: 0, scale: 1 } }}
-                      transition={{ type: 'spring', stiffness: 260 }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 7, background: b.bg, border: `1.5px solid ${b.border}`, borderRadius: 999, padding: '7px 14px', fontSize: '0.74rem', color: b.color, fontWeight: 600 }}
-                    >
-                      <b.icon style={{ width: 12, height: 12 }} />
-                      {b.label}
-                    </motion.div>
-                  ))}
+                  <button className="hero-btn-primary">
+                    Explore Menu
+                  </button>
+                  <button className="hero-btn-ghost">
+                    Reserve a Table
+                  </button>
                 </motion.div>
 
-                {/* Social proof row */}
+                {/* Dot indicators */}
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.85 }}
-                  style={{ marginTop: '1.75rem', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+                  className="hero-dots"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.1, duration: 0.6 }}
                 >
-                  <div style={{ display: 'flex' }}>
-                    {['🧑‍🍳', '👨‍🍳', '👩‍🍳'].map((e, i) => (
-                      <span key={i} style={{ fontSize: '1.2rem', marginLeft: i > 0 ? -6 : 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}>{e}</span>
-                    ))}
-                  </div>
-                  <div style={{ width: 1, height: 28, background: '#E7E3DC' }} />
-                  <span style={{ fontSize: '0.78rem', color: '#78716C', lineHeight: 1.5 }}>
-                    Trusted by <strong style={{ color: '#1C1917' }}>800+</strong> guests daily
-                  </span>
-                  <div style={{ display: 'flex', gap: 2 }}>
-                    {[1,2,3,4,5].map(i => (
-                      <span key={i} style={{ color: '#F59E0B', fontSize: '0.75rem' }}>★</span>
-                    ))}
-                  </div>
-                  <span style={{ fontSize: '0.72rem', color: '#78716C' }}>4.9 / 5</span>
+                  {HERO_IMAGES.map((_, i) => (
+                    <motion.button
+                      key={i}
+                      onClick={() => setHeroImg(i)}
+                      animate={{
+                        width: i === heroImg ? 40 : 20,
+                        background: i === heroImg ? '#C4894A' : 'rgba(196,137,74,0.28)',
+                      }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      style={{
+                        height: 2,
+                        borderRadius: 1,
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                      aria-label={`Go to slide ${i + 1}`}
+                    />
+                  ))}
                 </motion.div>
               </motion.div>
             </div>
 
-            {/* ── RIGHT: Live restaurant panel ── */}
-            <div className="hero-right" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <HeroRightPanel restaurant={activeRestaurant} />
-            </div>
+            {/* RIGHT — Status + Cuisine panel */}
+            <div className="hero-right">
+              <motion.div
+                className="hero-info-panel"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.9, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {/* Vertical tag */}
+                <span className="hero-vertical-tag">Award Winning Chefs</span>
 
+                {/* Open/closed card */}
+                <div className="hero-status-card">
+                  {(() => {
+                    const isOpen = (() => {
+                      if (!activeRestaurant?.open_time || !activeRestaurant?.close_time) return true
+                      const now = new Date()
+                      const [oh, om] = activeRestaurant.open_time.split(':').map(Number)
+                      const [ch, cm] = activeRestaurant.close_time.split(':').map(Number)
+                      const cur = now.getHours() * 60 + now.getMinutes()
+                      return cur >= oh * 60 + om && cur <= ch * 60 + cm
+                    })()
+                    return (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                          <div style={{ position: 'relative', width: 8, height: 8, flexShrink: 0 }}>
+                            <motion.div
+                              animate={{ scale: [1, 2.4, 1], opacity: [0.5, 0, 0.5] }}
+                              transition={{ duration: 2.2, repeat: Infinity }}
+                              style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: isOpen ? '#4ADE80' : '#F87171' }}
+                            />
+                            <div style={{ position: 'absolute', inset: 1, borderRadius: '50%', background: isOpen ? '#4ADE80' : '#F87171' }} />
+                          </div>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: isOpen ? '#4ADE80' : '#F87171', letterSpacing: '0.04em' }}>
+                            {isOpen ? 'Currently Open' : 'Currently Closed'}
+                          </span>
+                        </div>
+                        {activeRestaurant?.open_time && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                            <Clock style={{ width: 11, height: 11, color: 'rgba(196,137,74,0.6)', flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.68rem', color: 'rgba(242,234,216,0.52)', fontWeight: 300 }}>
+                              {activeRestaurant.open_time} – {activeRestaurant.close_time}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ borderTop: '1px solid rgba(196,137,74,0.12)', paddingTop: 10 }}>
+                          <p style={{ fontSize: '0.72rem', fontWeight: 500, color: 'rgba(242,234,216,0.72)', marginBottom: 3 }}>
+                            {activeRestaurant?.restaurant_name ?? 'Grand Azure'}
+                          </p>
+                          {activeRestaurant?.city && (
+                            <p style={{ fontSize: '0.62rem', color: 'rgba(196,137,74,0.6)', fontWeight: 300 }}>
+                              {activeRestaurant.city}
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+
+                {/* Cuisine tags */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
+                  {(activeRestaurant?.cuisine_type
+                    ? activeRestaurant.cuisine_type.split(',').map(s => s.trim()).filter(Boolean)
+                    : ['Continental', 'Asian Fusion', 'Grill']
+                  ).map((tag, i) => (
+                    <span
+                      key={tag}
+                      style={{
+                        background: 'rgba(5,3,2,0.45)',
+                        border: '1px solid rgba(196,137,74,0.22)',
+                        borderRadius: 2,
+                        padding: '4px 12px',
+                        fontSize: '0.6rem',
+                        fontWeight: 500,
+                        color: 'rgba(196,137,74,0.75)',
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        backdropFilter: 'blur(8px)',
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
+
+        {/* ── Scroll indicator ── */}
+        <motion.div
+          className="hero-scroll"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6, duration: 0.8 }}
+        >
+          <span className="hero-scroll-text">Scroll</span>
+          <motion.div
+            animate={{ scaleY: [1, 1.1, 1], opacity: [0.4, 0.9, 0.4] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(196,137,74,0.7), transparent)' }}
+          />
+        </motion.div>
+
+        {/* ── Bottom meta bar ── */}
+        <motion.div
+          className="hero-meta-bar"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex' }}>
+              {['🧑‍🍳', '👨‍🍳', '👩‍🍳'].map((e, i) => (
+                <span key={i} style={{ fontSize: '1rem', marginLeft: i > 0 ? -5 : 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>{e}</span>
+              ))}
+            </div>
+            <span style={{ fontSize: '0.68rem', color: 'rgba(242,234,216,0.5)', fontWeight: 300 }}>
+              Trusted by <strong style={{ color: 'rgba(242,234,216,0.75)', fontWeight: 500 }}>800+</strong> guests daily
+            </span>
+          </div>
+
+          <div className="hero-meta-right" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            {[
+              { label: 'Rating', value: '4.9 / 5 ★' },
+              { label: 'Cuisines', value: '12+ Varieties' },
+              { label: 'Michelin', value: '5 Stars' },
+              { label: 'Avg Delivery', value: '30 min' },
+            ].map((stat, i, arr) => (
+              <div key={stat.label} style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                <div className="hero-meta-stat">
+                  <span className="hero-meta-label">{stat.label}</span>
+                  <span className="hero-meta-value">{stat.value}</span>
+                </div>
+                {i < arr.length - 1 && <div className="hero-meta-sep" />}
+              </div>
+            ))}
+          </div>
+        </motion.div>
       </section>
 
-      {/* ── STATS STRIP ── */}
+      {/* ══════════════════ STATS STRIP ══════════════════ */}
       <section style={{ background: '#F7F4EF', padding: '2.5rem 0 1rem' }}>
         <div className="pg">
           <div className="stats-grid" style={{ marginBottom: '2rem' }}>
@@ -828,46 +830,32 @@ export default function RestaurantMenuExperience({
             <StatBadge value="30min" label="Avg Delivery" icon={Clock} palette={PASTEL_CARDS[1]} />
           </div>
 
-          {/* Controls card */}
-          <motion.div
-            className="controls-card"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {/* Outlet selector */}
+          <motion.div className="controls-card" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
               <div style={{ flex: '1 1 200px' }}>
                 <span style={{ fontSize: '0.66rem', letterSpacing: '0.14em', color: '#D4722A', textTransform: 'uppercase', fontWeight: 700 }}>Select Outlet</span>
                 <select value={restaurantId} onChange={(e) => setRestaurantId(Number(e.target.value))} className="field" style={{ marginTop: 8, display: 'block' }}>
-                  {restaurants.map((r) => (
-                    <option key={r.restaurant_id} value={r.restaurant_id}>{r.restaurant_name} — {r.hotel_name}</option>
-                  ))}
+                  {restaurants.map((r) => (<option key={r.restaurant_id} value={r.restaurant_id}>{r.restaurant_name} — {r.hotel_name}</option>))}
                 </select>
               </div>
               {activeRestaurant?.open_time && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: '#78716C', fontWeight: 500, paddingBottom: '0.4rem' }}>
-                  <Clock style={{ width: 13, height: 13, color: '#D4722A' }} />
-                  {activeRestaurant.open_time} – {activeRestaurant.close_time}
+                  <Clock style={{ width: 13, height: 13, color: '#D4722A' }} />{activeRestaurant.open_time} – {activeRestaurant.close_time}
                 </div>
               )}
             </div>
 
-            {/* Order type */}
             <div style={{ marginBottom: '1.25rem' }}>
               <span style={{ fontSize: '0.66rem', letterSpacing: '0.14em', color: '#78716C', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: 10 }}>Order Type</span>
               <div className="order-pills-grid">
                 {([
-                  { key: 'dine_in', label: 'Dine-in', Icon: UtensilsCrossed, desc: 'At your table' },
-                  { key: 'room_service', label: 'Room Service', Icon: BedDouble, desc: 'Delivered to room' },
-                  { key: 'takeaway', label: 'Takeaway', Icon: BadgePercent, desc: 'Collect & go' },
+                  { key: 'dine_in',      label: 'Dine-in',      Icon: UtensilsCrossed, desc: 'At your table'     },
+                  { key: 'room_service', label: 'Room Service',  Icon: BedDouble,       desc: 'Delivered to room' },
+                  { key: 'takeaway',     label: 'Takeaway',      Icon: BadgePercent,    desc: 'Collect & go'      },
                 ] as const).map((t) => (
                   <button key={t.key} type="button" onClick={() => setOrderType(t.key)} className={`order-pill${orderType === t.key ? ' active' : ''}`}>
                     <t.Icon style={{ width: 20, height: 20, flexShrink: 0, color: orderType === t.key ? '#D4722A' : '#A8A29E' }} />
-                    <div>
-                      <div className="order-pill-label">{t.label}</div>
-                      <div className="order-pill-desc">{t.desc}</div>
-                    </div>
+                    <div><div className="order-pill-label">{t.label}</div><div className="order-pill-desc">{t.desc}</div></div>
                   </button>
                 ))}
               </div>
@@ -900,31 +888,24 @@ export default function RestaurantMenuExperience({
         </div>
       </section>
 
-      {/* ── CATEGORY BAR ── */}
+      {/* ══════════════════ CATEGORY BAR ══════════════════ */}
       <div className="cat-bar">
         <div className="pg">
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
             {allCategories.map((cat) => (
-              <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)} className={`cat-btn${activeCategoryId === cat.id ? ' active' : ''}`}>
-                {cat.name}
-              </button>
+              <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)} className={`cat-btn${activeCategoryId === cat.id ? ' active' : ''}`}>{cat.name}</button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── MENU SECTIONS ── */}
+      {/* ══════════════════ MENU SECTIONS ══════════════════ */}
       <section className="sec">
         <div className="pg">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5rem' }}>
             {categoriesToRender.map((cat, catIdx) => (
               <div key={cat.id}>
-                <motion.div
-                  initial={{ opacity: 0, x: -16 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}
-                >
+                <motion.div initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
                     <span style={{ fontSize: '0.66rem', letterSpacing: '0.16em', color: PASTEL_CARDS[catIdx % PASTEL_CARDS.length].accent, textTransform: 'uppercase', fontWeight: 700 }}>{cat.items.length} dishes</span>
                     <h2 className="serif" style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)', marginTop: 4 }}>{cat.name}</h2>
@@ -939,9 +920,7 @@ export default function RestaurantMenuExperience({
                     return (
                       <TiltCard key={item.id}>
                         <motion.article
-                          initial={{ opacity: 0, y: 28 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true }}
+                          initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                           transition={{ delay: idx * 0.07, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                           whileHover={{ boxShadow: `0 20px 48px ${palette.accent}22` }}
                           style={{ background: palette.bg, border: `1.5px solid ${palette.border}`, borderRadius: 20, overflow: 'hidden', height: '100%' }}
@@ -972,30 +951,19 @@ export default function RestaurantMenuExperience({
                             <p style={{ fontSize: '0.8rem', color: '#78716C', lineHeight: 1.65, marginBottom: '0.85rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                             {!!item.tags?.length && (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: '0.9rem' }}>
-                                {item.tags.map((t) => (
-                                  <span key={t} style={{ background: palette.tag, border: `1px solid ${palette.border}`, borderRadius: 999, padding: '2px 9px', fontSize: '0.62rem', fontWeight: 600, color: palette.accent }}>{t}</span>
-                                ))}
+                                {item.tags.map((t) => (<span key={t} style={{ background: palette.tag, border: `1px solid ${palette.border}`, borderRadius: 999, padding: '2px 9px', fontSize: '0.62rem', fontWeight: 600, color: palette.accent }}>{t}</span>))}
                               </div>
                             )}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', borderTop: `1px solid ${palette.border}`, paddingTop: '0.85rem' }}>
                               <AnimatePresence mode="wait">
                                 {inCart === 0 ? (
-                                  <motion.button
-                                    key="add"
-                                    initial={{ opacity: 0, scale: 0.85 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.85 }}
-                                    onClick={() => addItem(item)}
-                                    className="btn-add"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.97 }}
-                                  >
+                                  <motion.button key="add" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} onClick={() => addItem(item)} className="btn-add" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
                                     <Plus style={{ width: 13, height: 13 }} /> Add to order
                                   </motion.button>
                                 ) : (
-                                  <motion.div key="qty" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#D4722A', border: `1.5px solid #D4722A`, borderRadius: 12, padding: '4px 8px' }}>
+                                  <motion.div key="qty" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#D4722A', border: '1.5px solid #D4722A', borderRadius: 12, padding: '4px 8px' }}>
                                     <button onClick={() => decItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: '#fff', padding: 2 }}><Minus style={{ width: 14, height: 14 }} /></button>
-                                                                        <span style={{ minWidth: 20, textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>{inCart}</span>
+                                    <span style={{ minWidth: 20, textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>{inCart}</span>
                                     <button onClick={() => addItem(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: '#fff', padding: 2 }}><Plus style={{ width: 14, height: 14 }} /></button>
                                   </motion.div>
                                 )}
@@ -1013,66 +981,30 @@ export default function RestaurantMenuExperience({
         </div>
       </section>
 
-      {/* ── PRIVATE DINING ── */}
+      {/* ══════════════════ PRIVATE DINING ══════════════════ */}
       <section style={{ padding: '0 1.25rem 4rem' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <motion.div
-            className="private-card"
-            initial={{ opacity: 0, y: 32 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <motion.div className="private-card" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
             <div style={{ position: 'absolute', top: -60, right: -60, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,114,42,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', bottom: -50, left: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,51,234,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
             <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', padding: '2.5rem 2rem' }}>
-              <motion.div
-                style={{ fontSize: '5rem', flexShrink: 0, transformStyle: 'preserve-3d', filter: 'drop-shadow(0 24px 48px rgba(212,114,42,0.3))' }}
-                animate={{ rotateY: [0, 20, -12, 0], rotateX: [0, -10, 8, 0], y: [0, -14, 6, 0] }}
-                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                🍽️
-              </motion.div>
-
+              <motion.div style={{ fontSize: '5rem', flexShrink: 0, transformStyle: 'preserve-3d', filter: 'drop-shadow(0 24px 48px rgba(212,114,42,0.3))' }} animate={{ rotateY: [0, 20, -12, 0], rotateX: [0, -10, 8, 0], y: [0, -14, 6, 0] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}>🍽️</motion.div>
               <div style={{ flex: '1 1 260px' }}>
                 <span style={{ fontSize: '0.66rem', letterSpacing: '0.16em', color: '#D4722A', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Private Dining</span>
-                <h2 className="serif" style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', marginBottom: '0.6rem' }}>
-                  Reserve a table for<br /><em style={{ color: '#D4722A', fontStyle: 'italic' }}>special occasions</em>
-                </h2>
-                <p style={{ fontSize: '0.85rem', color: '#78716C', lineHeight: 1.75, maxWidth: 380, marginBottom: '1.5rem' }}>
-                  Bespoke menus, floral arrangements, and dedicated staff for your most memorable moments.
-                </p>
+                <h2 className="serif" style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', marginBottom: '0.6rem' }}>Reserve a table for<br /><em style={{ color: '#D4722A', fontStyle: 'italic' }}>special occasions</em></h2>
+                <p style={{ fontSize: '0.85rem', color: '#78716C', lineHeight: 1.75, maxWidth: 380, marginBottom: '1.5rem' }}>Bespoke menus, floral arrangements, and dedicated staff for your most memorable moments.</p>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <motion.button
-                    whileHover={{ scale: 1.04, boxShadow: '0 12px 32px rgba(212,114,42,0.35)' }}
-                    whileTap={{ scale: 0.97 }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#D4722A', color: '#fff', padding: '11px 26px', borderRadius: 12, fontSize: '0.83rem', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 6px 20px rgba(212,114,42,0.28)' }}
-                  >
+                  <motion.button whileHover={{ scale: 1.04, boxShadow: '0 12px 32px rgba(212,114,42,0.35)' }} whileTap={{ scale: 0.97 }} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#D4722A', color: '#fff', padding: '11px 26px', borderRadius: 12, fontSize: '0.83rem', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 6px 20px rgba(212,114,42,0.28)' }}>
                     <Phone style={{ width: 14, height: 14 }} /> Enquire Now
                   </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.97 }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #F5C9A8', color: '#D4722A', padding: '11px 22px', borderRadius: 12, fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer' }}
-                  >
+                  <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #F5C9A8', color: '#D4722A', padding: '11px 22px', borderRadius: 12, fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer' }}>
                     View Sample Menu <ChevronRight style={{ width: 14, height: 14 }} />
                   </motion.button>
                 </div>
               </div>
-
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                {[
-                  { icon: '🌸', text: 'Floral Arrangements' },
-                  { icon: '👨‍🍳', text: 'Private Chef' },
-                  { icon: '🥂', text: 'Wine Pairing' },
-                  { icon: '🎵', text: 'Live Music' },
-                ].map((feat) => (
-                  <motion.div
-                    key={feat.text}
-                    whileHover={{ x: 4 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1.5px solid #F5C9A8', borderRadius: 12, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 600, color: '#78716C' }}
-                  >
+                {[{ icon: '🌸', text: 'Floral Arrangements' }, { icon: '👨‍🍳', text: 'Private Chef' }, { icon: '🥂', text: 'Wine Pairing' }, { icon: '🎵', text: 'Live Music' }].map((feat) => (
+                  <motion.div key={feat.text} whileHover={{ x: 4 }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1.5px solid #F5C9A8', borderRadius: 12, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 600, color: '#78716C' }}>
                     <span style={{ fontSize: '1rem' }}>{feat.icon}</span> {feat.text}
                   </motion.div>
                 ))}
@@ -1082,7 +1014,7 @@ export default function RestaurantMenuExperience({
         </div>
       </section>
 
-      {/* ── FLOATING CART FAB ── */}
+      {/* ══════════════════ CART FAB ══════════════════ */}
       <AnimatePresence>
         {totalItems > 0 && (
           <motion.button className="cart-fab" initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 20 }} onClick={() => setCartOpen(true)}>
@@ -1095,7 +1027,7 @@ export default function RestaurantMenuExperience({
         )}
       </AnimatePresence>
 
-      {/* ── CART DRAWER ── */}
+      {/* ══════════════════ CART DRAWER ══════════════════ */}
       <AnimatePresence>
         {cartOpen && (
           <>

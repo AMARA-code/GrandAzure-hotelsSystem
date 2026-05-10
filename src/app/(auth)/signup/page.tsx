@@ -30,7 +30,7 @@ const STRENGTH_META = {
   empty:  { label: '',       bars: 0, barColor: '#ead8c4', text: 'text-stone-300' },
   weak:   { label: 'Weak',   bars: 1, barColor: '#f87171', text: 'text-red-400' },
   fair:   { label: 'Fair',   bars: 2, barColor: '#d4722a', text: 'text-orange-500' },
-  good:   { label: 'Good',   bars: 3, barColor: '#c9a84c', text: 'text-amber-500' },
+  good:   { label: 'Good',   bars: 3, barColor: '#d4722a', text: 'text-amber-500' },
   strong: { label: 'Strong', bars: 4, barColor: '#4ade80', text: 'text-emerald-500' },
 }
 
@@ -95,7 +95,7 @@ export default function SignupPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 overflow-hidden relative"
+      className="h-screen flex items-center justify-center p-2 md:p-3 overflow-hidden relative"
       style={{ background: 'linear-gradient(135deg, #fdf8f2 0%, #fff6ed 35%, #fef9f5 65%, #fdf4ee 100%)' }}
     >
       {/* Pastel blobs */}
@@ -117,7 +117,7 @@ export default function SignupPage() {
       <div className="w-full max-w-5xl relative z-10">
 
         {/* Ticker */}
-        <div className="overflow-hidden rounded-2xl border border-[#ead8c4] bg-[#fff6ed]/90 py-2.5 mb-6 shadow-sm backdrop-blur-sm">
+        <div className="overflow-hidden rounded-2xl border border-[#ead8c4] bg-[#fff6ed]/90 py-2 mb-3 shadow-sm backdrop-blur-sm">
           <motion.div className="flex w-max whitespace-nowrap"
             animate={{ x: ['0%', '-50%'] }} transition={{ duration: 28, ease: 'linear', repeat: Infinity }}>
             {['Join the Collection', 'Loyalty Rewards', 'Exclusive Benefits', 'VIP Access', 'Curated Stays', 'Priority Service',
@@ -139,12 +139,12 @@ export default function SignupPage() {
             transformStyle: 'preserve-3d', perspective: 1400,
             boxShadow: '0 32px 80px rgba(139,90,60,0.18), 0 8px 24px rgba(139,90,60,0.10)',
           }}
-          className="grid lg:grid-cols-[1fr_1.35fr] overflow-hidden rounded-3xl border border-[#ead8c4]"
+          className="grid lg:grid-cols-[1fr_1.35fr] overflow-hidden rounded-3xl border border-[#ead8c4] max-h-[94vh]"
         >
 
           {/* Left panel */}
           <div
-            className="relative hidden lg:flex flex-col justify-between overflow-hidden p-10"
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden p-7"
             style={{ background: 'linear-gradient(160deg, #fff8f0 0%, #fdecd8 50%, #fde3c4 100%)' }}
           >
             {/* Floating pastel shapes */}
@@ -157,7 +157,7 @@ export default function SignupPage() {
             </div>
             <div className="absolute top-5 right-5 opacity-10">
               <svg width="72" height="72" viewBox="0 0 60 60" fill="none">
-                <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#c9a84c" strokeWidth="1.5" fill="none" />
+                <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#d4722a" strokeWidth="1.5" fill="none" />
               </svg>
             </div>
 
@@ -171,11 +171,11 @@ export default function SignupPage() {
             <div className="relative z-10 space-y-5">
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="h-px w-6 bg-[#c9a84c]" />
-                  <Sparkles className="h-3 w-3 text-[#c9a84c]" />
-                  <div className="h-px w-6 bg-[#c9a84c]" />
+                  <div className="h-px w-6 bg-[#d4722a]" />
+                  <Sparkles className="h-3 w-3 text-[#d4722a]" />
+                  <div className="h-px w-6 bg-[#d4722a]" />
                 </div>
-                <h1 className="font-display text-4xl font-bold text-stone-900 leading-tight">
+                <h1 className="font-display text-3xl font-bold text-stone-900 leading-tight">
                   Join the<br /><em className="text-[#d4722a] not-italic">Elite Circle</em>
                 </h1>
                 <p className="mt-2.5 text-sm text-stone-500 leading-relaxed">
@@ -184,14 +184,14 @@ export default function SignupPage() {
               </div>
 
               {/* Benefits */}
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {benefits.map((b, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.08 * i + 0.3 }}
-                    className={`flex items-start gap-2.5 px-3.5 py-2.5 rounded-2xl border text-xs font-medium leading-relaxed ${b.color}`}
+                    className={`flex items-start gap-2 px-3 py-2 rounded-2xl border text-[11px] font-medium leading-relaxed ${b.color}`}
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     {b.text}
@@ -200,7 +200,7 @@ export default function SignupPage() {
               </div>
 
               {/* Accent cards */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {accentCards.map((c, i) => (
                   <motion.div
                     key={c.label}
@@ -209,7 +209,7 @@ export default function SignupPage() {
                     transition={{ delay: 0.1 * i + 0.5 }}
                     whileHover={{ y: -4, rotateX: 5, rotateY: -5, scale: 1.03 }}
                     style={{ transformStyle: 'preserve-3d' }}
-                    className={`rounded-2xl border bg-gradient-to-br px-3 py-2.5 text-[11px] font-semibold flex items-center gap-1.5 ${c.color}`}
+                    className={`rounded-2xl border bg-gradient-to-br px-2.5 py-2 text-[10px] font-semibold flex items-center gap-1.5 ${c.color}`}
                   >
                     <Sparkles className="h-2.5 w-2.5 flex-shrink-0" />{c.label}
                   </motion.div>
@@ -219,14 +219,14 @@ export default function SignupPage() {
 
             <p className="relative z-10 text-[10px] text-stone-400 tracking-wide">© 2025 Grand Azure Hotel Group</p>
             <div className="absolute bottom-0 left-0 right-0 h-[3px]"
-              style={{ background: 'linear-gradient(90deg, transparent, #c9a84c 30%, #d4722a 60%, transparent)' }} />
+              style={{ background: 'linear-gradient(90deg, transparent, #d4722a 30%, #d4722a 60%, transparent)' }} />
           </div>
 
           {/* Right form panel */}
-          <div className="px-8 py-10 lg:px-12" style={{ background: 'linear-gradient(180deg, #fffaf7 0%, #fdf5ee 100%)' }}>
+          <div className="px-6 py-6 lg:px-8 lg:py-7 overflow-y-auto" style={{ background: 'linear-gradient(180deg, #fffaf7 0%, #fdf5ee 100%)' }}>
 
             {/* Mobile brand */}
-            <div className="flex lg:hidden justify-center mb-6">
+            <div className="flex lg:hidden justify-center mb-4">
               <BrandMark />
             </div>
 
@@ -235,15 +235,15 @@ export default function SignupPage() {
                 <div className="h-px w-5 bg-[#d4722a]" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4722a]">Create Account</span>
               </div>
-              <h2 className="font-display text-4xl font-bold text-stone-900 leading-tight">
+              <h2 className="font-display text-3xl font-bold text-stone-900 leading-tight">
                 Begin Your<br /><span className="text-[#8b5a3c]">Luxury Journey</span>
               </h2>
-              <p className="mt-2 mb-6 text-sm text-stone-400 leading-relaxed">
+              <p className="mt-1.5 mb-4 text-sm text-stone-400 leading-relaxed">
                 Loyalty benefits, exclusive offers, and seamless booking await.
               </p>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#ead8c4]" />
-                <div className="w-1.5 h-1.5 rotate-45 bg-[#c9a84c]" />
+                <div className="w-1.5 h-1.5 rotate-45 bg-[#d4722a]" />
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#ead8c4]" />
               </div>
             </motion.div>
@@ -251,7 +251,7 @@ export default function SignupPage() {
             <motion.form
               onSubmit={handleSignup}
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="space-y-4"
+              className="space-y-3.5"
             >
               {/* Name row */}
               <div className="grid grid-cols-2 gap-3">
@@ -334,7 +334,7 @@ export default function SignupPage() {
               </motion.button>
             </motion.form>
 
-            <p className="mt-5 text-center text-sm text-stone-400">
+            <p className="mt-3 text-center text-sm text-stone-400">
               Already a member?{' '}
               <Link href="/login" className="font-semibold text-[#d4722a] hover:text-[#8b5a3c] transition-colors">Sign in</Link>
             </p>

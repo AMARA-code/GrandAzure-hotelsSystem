@@ -61,7 +61,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 overflow-hidden relative"
+      className="h-screen flex items-center justify-center p-2 md:p-3 overflow-hidden relative"
       style={{ background: 'linear-gradient(135deg, #fdf8f2 0%, #fff6ed 35%, #fef9f5 65%, #fdf4ee 100%)' }}
     >
       {/* Ambient pastel blobs */}
@@ -84,7 +84,7 @@ export default function LoginPage() {
       <div className="w-full max-w-5xl relative z-10">
 
         {/* Ticker */}
-        <div className="overflow-hidden rounded-2xl border border-[#ead8c4] bg-[#fff6ed]/90 py-2.5 mb-6 shadow-sm backdrop-blur-sm">
+        <div className="overflow-hidden rounded-2xl border border-[#ead8c4] bg-[#fff6ed]/90 py-2 mb-3 shadow-sm backdrop-blur-sm">
           <motion.div className="flex w-max whitespace-nowrap"
             animate={{ x: ['0%', '-50%'] }}
             transition={{ duration: 24, ease: 'linear', repeat: Infinity }}>
@@ -107,11 +107,11 @@ export default function LoginPage() {
             perspective: 1400,
             boxShadow: '0 32px 80px rgba(139,90,60,0.18), 0 8px 24px rgba(139,90,60,0.10), 0 2px 8px rgba(139,90,60,0.06)',
           }}
-          className="grid lg:grid-cols-[1fr_1.1fr] overflow-hidden rounded-3xl border border-[#ead8c4]"
+          className="grid lg:grid-cols-[1fr_1.1fr] overflow-hidden rounded-3xl border border-[#ead8c4] max-h-[94vh]"
         >
           {/* Left decorative panel */}
           <div
-            className="relative hidden lg:flex flex-col justify-between overflow-hidden p-10"
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden p-7"
             style={{ background: 'linear-gradient(160deg, #fff8f0 0%, #fdecd8 50%, #fde3c4 100%)' }}
           >
             {/* Floating pastel shapes */}
@@ -126,7 +126,7 @@ export default function LoginPage() {
             {/* Gold star ornament */}
             <div className="absolute top-5 right-5 opacity-12">
               <svg width="72" height="72" viewBox="0 0 60 60" fill="none">
-                <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#c9a84c" strokeWidth="1.5" fill="none" />
+                <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#d4722a" strokeWidth="1.5" fill="none" />
               </svg>
             </div>
 
@@ -140,11 +140,11 @@ export default function LoginPage() {
             <div className="relative z-10 space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="h-px w-6 bg-[#c9a84c]" />
-                  <Sparkles className="h-3 w-3 text-[#c9a84c]" />
-                  <div className="h-px w-6 bg-[#c9a84c]" />
+                  <div className="h-px w-6 bg-[#d4722a]" />
+                  <Sparkles className="h-3 w-3 text-[#d4722a]" />
+                  <div className="h-px w-6 bg-[#d4722a]" />
                 </div>
-                <h1 className="font-display text-5xl font-bold text-stone-900 leading-[1.1]">
+                <h1 className="font-display text-4xl font-bold text-stone-900 leading-[1.08]">
                   Where Luxury<br />
                   <em className="text-[#d4722a] not-italic">Meets Excellence</em>
                 </h1>
@@ -154,7 +154,7 @@ export default function LoginPage() {
               </div>
 
               {/* Pastel feature cards */}
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 {pastelCards.map((card, i) => (
                   <motion.div
                     key={card.label}
@@ -173,8 +173,8 @@ export default function LoginPage() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-2.5">
                 {[{ value: '3', label: 'Properties' }, { value: '180', label: 'Rooms' }, { value: '5★', label: 'Rated' }].map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-[#ead8c4] bg-white/60 p-3 text-center backdrop-blur-sm shadow-sm">
-                    <p className="font-display text-xl font-bold text-stone-900">{stat.value}</p>
+                  <div key={stat.label} className="rounded-2xl border border-[#ead8c4] bg-white/60 p-2.5 text-center backdrop-blur-sm shadow-sm">
+                    <p className="font-display text-lg font-bold text-stone-900">{stat.value}</p>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b5a3c] mt-0.5">{stat.label}</p>
                   </div>
                 ))}
@@ -185,16 +185,16 @@ export default function LoginPage() {
 
             {/* Gold bottom line */}
             <div className="absolute bottom-0 left-0 right-0 h-[3px]"
-              style={{ background: 'linear-gradient(90deg, transparent, #c9a84c 30%, #d4722a 60%, transparent)' }} />
+              style={{ background: 'linear-gradient(90deg, transparent, #d4722a 30%, #d4722a 60%, transparent)' }} />
           </div>
 
           {/* Right form panel */}
           <div
-            className="px-8 py-10 lg:px-12"
+            className="px-6 py-6 lg:px-8 lg:py-7 overflow-y-auto"
             style={{ background: 'linear-gradient(180deg, #fffaf7 0%, #fdf5ee 100%)' }}
           >
             {/* Mobile brand */}
-            <div className="flex lg:hidden justify-center mb-8">
+            <div className="flex lg:hidden justify-center mb-4">
               <BrandMark />
             </div>
 
@@ -203,16 +203,16 @@ export default function LoginPage() {
                 <div className="h-px w-5 bg-[#d4722a]" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4722a]">Welcome Back</span>
               </div>
-              <h2 className="font-display text-4xl font-bold text-stone-900 leading-tight">
+              <h2 className="font-display text-3xl font-bold text-stone-900 leading-tight">
                 Sign In to<br /><span className="text-[#8b5a3c]">Your Account</span>
               </h2>
-              <p className="mt-2 mb-7 text-sm text-stone-400 leading-relaxed">
+              <p className="mt-1.5 mb-4 text-sm text-stone-400 leading-relaxed">
                 Access your dashboard and manage bookings across all properties.
               </p>
               {/* Ornament divider */}
-              <div className="flex items-center gap-3 mb-7">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#ead8c4]" />
-                <div className="w-1.5 h-1.5 rotate-45 bg-[#c9a84c]" />
+                <div className="w-1.5 h-1.5 rotate-45 bg-[#d4722a]" />
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#ead8c4]" />
               </div>
             </motion.div>
@@ -222,7 +222,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="space-y-5"
+              className="space-y-4"
             >
               {/* Email */}
               <div className="space-y-1.5">
@@ -281,7 +281,7 @@ export default function LoginPage() {
             </motion.form>
 
             {/* Divider */}
-            <div className="relative my-6">
+            <div className="relative my-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#ead8c4]" /></div>
               <div className="relative flex justify-center">
                 <span className="bg-[#fffaf7] px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#c4a882]">Guest Portal</span>
@@ -291,12 +291,12 @@ export default function LoginPage() {
             {/* Guest CTA */}
             <Link href="/"
               className="w-full py-3.5 px-6 rounded-2xl border-2 border-[#ead8c4] text-[#8b5a3c] font-semibold text-sm flex items-center justify-center gap-2.5 hover:border-[#d4722a]/50 hover:bg-orange-50/60 transition-all duration-200 hover:-translate-y-px">
-              <Star className="h-4 w-4 text-[#c9a84c]" />
+              <Star className="h-4 w-4 text-[#d4722a]" />
               Book a Room as Guest
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
 
-            <p className="mt-5 text-center text-sm text-stone-400">
+            <p className="mt-4 text-center text-sm text-stone-400">
               Don&apos;t have an account?{' '}
               <Link href="/signup" className="font-semibold text-[#d4722a] hover:text-[#8b5a3c] transition-colors">Sign up</Link>
             </p>

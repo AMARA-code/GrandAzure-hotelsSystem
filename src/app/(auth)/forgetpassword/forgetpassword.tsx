@@ -22,6 +22,13 @@ export default function ForgotPasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const appUrl = (() => {
+    const raw = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim()
+    if (!raw) return ''
+    const deduped = raw.includes('/https://') ? raw.split('/https://')[0] : raw
+    return deduped.replace(/\/+$/, '')
+  })()
+  const resetRedirectUrl = `${appUrl || window.location.origin}/forgot-password?step=reset`
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -79,7 +86,7 @@ export default function ForgotPasswordPage() {
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/forgot-password?step=reset`,
+        redirectTo: resetRedirectUrl,
       })
       if (error) { toast.error(error.message); return }
       setStep('sent')
@@ -95,7 +102,7 @@ export default function ForgotPasswordPage() {
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/forgot-password?step=reset`,
+        redirectTo: resetRedirectUrl,
       })
       if (error) { toast.error(error.message); return }
       toast.success('Reset link resent to your inbox.')
@@ -210,7 +217,7 @@ export default function ForgotPasswordPage() {
             </div>
             <div className="absolute top-5 right-5 opacity-10">
               <svg width="72" height="72" viewBox="0 0 60 60" fill="none">
-                <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#c9a84c" strokeWidth="1.5" fill="none" />
+                <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#d4722a" strokeWidth="1.5" fill="none" />
               </svg>
             </div>
 
@@ -224,9 +231,9 @@ export default function ForgotPasswordPage() {
             <div className="relative z-10 space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="h-px w-6 bg-[#c9a84c]" />
-                  <Sparkles className="h-3 w-3 text-[#c9a84c]" />
-                  <div className="h-px w-6 bg-[#c9a84c]" />
+                  <div className="h-px w-6 bg-[#d4722a]" />
+                  <Sparkles className="h-3 w-3 text-[#d4722a]" />
+                  <div className="h-px w-6 bg-[#d4722a]" />
                 </div>
                 <h1 className="font-display text-4xl font-bold text-stone-900 leading-tight">
                   Secure<br /><em className="text-[#d4722a] not-italic">Account Recovery</em>
@@ -280,7 +287,7 @@ export default function ForgotPasswordPage() {
 
             <p className="relative z-10 text-[10px] text-stone-400 tracking-wide">© 2025 Grand Azure Hotel Group</p>
             <div className="absolute bottom-0 left-0 right-0 h-[3px]"
-              style={{ background: 'linear-gradient(90deg, transparent, #c9a84c 30%, #d4722a 60%, transparent)' }} />
+              style={{ background: 'linear-gradient(90deg, transparent, #d4722a 30%, #d4722a 60%, transparent)' }} />
           </div>
 
           {/* Right form panel */}
@@ -316,7 +323,7 @@ export default function ForgotPasswordPage() {
                   {/* Gold ornament */}
                   <div className="flex items-center gap-3 mb-7">
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#ead8c4]" />
-                    <div className="w-1.5 h-1.5 rotate-45 bg-[#c9a84c]" />
+                    <div className="w-1.5 h-1.5 rotate-45 bg-[#d4722a]" />
                     <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#ead8c4]" />
                   </div>
 
@@ -457,7 +464,7 @@ export default function ForgotPasswordPage() {
 
                   <div className="flex items-center gap-3 mb-7">
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#ead8c4]" />
-                    <div className="w-1.5 h-1.5 rotate-45 bg-[#c9a84c]" />
+                    <div className="w-1.5 h-1.5 rotate-45 bg-[#d4722a]" />
                     <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#ead8c4]" />
                   </div>
 

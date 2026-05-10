@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/forgetpassword",
+      "destination": "/forgot-password",
+      "permanent": true
+    },
+    {
+      "source": "/forgetpassword/:path*",
+      "destination": "/forgot-password/:path*",
+      "permanent": true
+    }
+  ]
+}

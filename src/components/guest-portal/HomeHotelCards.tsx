@@ -43,7 +43,7 @@ function StarRow({ count }: { count: number }) {
   return (
     <div style={{ display: 'flex', gap: 2 }}>
       {Array.from({ length: count }).map((_, i) => (
-        <Star key={i} style={{ width: 11, height: 11, fill: '#F59E0B', color: '#F59E0B' }} />
+        <Star key={i} style={{ width: 11, height: 11, fill: '#D4722A', color: '#D4722A' }} />
       ))}
     </div>
   )

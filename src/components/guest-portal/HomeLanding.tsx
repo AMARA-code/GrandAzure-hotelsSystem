@@ -127,7 +127,7 @@ function Stars({ rating, max = 10 }: { rating: number; max?: number }) {
   return (
     <div style={{ display: 'flex', gap: 2 }}>
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} style={{ width: 13, height: 13, fill: i < filled ? '#F59E0B' : 'none', color: i < filled ? '#F59E0B' : '#D1D5DB' }} />
+        <Star key={i} style={{ width: 13, height: 13, fill: i < filled ? '#D4722A' : 'none', color: i < filled ? '#D4722A' : '#D1D5DB' }} />
       ))}
     </div>
   )

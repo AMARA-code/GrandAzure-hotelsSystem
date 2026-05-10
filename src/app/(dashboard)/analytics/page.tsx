@@ -58,9 +58,9 @@ const HOTEL_COLORS: Record<string,string> = {
   'Azure Boutique Islamabad':'#10b981',
 }
 const TIER_COLORS: Record<string,string> = {
-  Diamond:'#0e8ee6', Platinum:'#8b5cf6', Gold:'#f59e0b', Silver:'#94a3b8',
+  Diamond:'#0e8ee6', Platinum:'#8b5cf6', Gold:'#d4722a', Silver:'#94a3b8',
 }
-const BAR_COLORS = ['#0e8ee6','#8b5cf6','#10b981','#f59e0b','#f43f5e','#06b6d4']
+const BAR_COLORS = ['#0e8ee6','#8b5cf6','#10b981','#d4722a','#f43f5e','#06b6d4']
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 const ALL_REVENUE: RevenueSummary[] = [
@@ -879,7 +879,7 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {[{l:'Available',v:h.available,c:'#10b981'},{l:'Occupied',v:h.occupied,c:color},{l:'Dirty',v:h.dirty,c:'#f59e0b'},{l:'Maint.',v:h.maintenance,c:'#f43f5e'}].map(item=>(
+                      {[{l:'Available',v:h.available,c:'#10b981'},{l:'Occupied',v:h.occupied,c:color},{l:'Dirty',v:h.dirty,c:'#d4722a'},{l:'Maint.',v:h.maintenance,c:'#f43f5e'}].map(item=>(
                         <div key={item.l} className="bg-slate-50 rounded-xl p-2 text-center">
                           <p className="text-sm font-bold" style={{color:item.c}}>{item.v}</p>
                           <p className="text-[10px] text-slate-400">{item.l}</p>
@@ -923,7 +923,7 @@ export default function AnalyticsPage() {
                 {label:'Total Enrolled',val:`${LOYALTY_STATS.reduce((s,l)=>s+l.guest_count,0)}`,sub:'Loyalty members',color:'#0e8ee6'},
                 {label:'Diamond',val:'3',sub:'148K avg pts',color:'#0e8ee6'},
                 {label:'Platinum',val:'4',sub:'61.5K avg pts',color:'#8b5cf6'},
-                {label:'Gold',val:'4',sub:'23.9K avg pts',color:'#f59e0b'},
+                {label:'Gold',val:'4',sub:'23.9K avg pts',color:'#d4722a'},
               ].map((item,i)=>(
                 <motion.div key={item.label} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:i*0.08}}
                   className="bg-white rounded-2xl shadow-premium border border-slate-100 p-4 text-center">

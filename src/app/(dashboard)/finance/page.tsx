@@ -92,7 +92,7 @@ const METHOD_CONFIG: Record<string, { label: string; icon: React.ElementType; co
   credit_card:       { label: 'Credit Card',   icon: CreditCard, color: 'text-amber-600',   bg: 'bg-amber-50'   },
 }
 
-const PIE_COLORS = ['#8b5cf6', '#0e8ee6', '#10b981', '#f59e0b']
+const PIE_COLORS = ['#8b5cf6', '#0e8ee6', '#10b981', '#d4722a']
 
 // Seed data from verified DB queries
 const HOTEL_SEED: HotelRevenue[] = [
