@@ -264,7 +264,7 @@ function InvoiceModal({ invoice, payment, onClose }: {
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="bg-white rounded-3xl shadow-premium-xl w-full max-w-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="gradient-azure px-6 md:px-8 py-6 relative overflow-hidden">
