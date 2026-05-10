@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarCheck, Plus, Download, Building2 } from 'lucide-react'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 import Link from 'next/link'
 import { useBookings, type BookingFilters } from '@/lib/hooks/useBookings'
 import BookingCard from '@/components/bookings/BookingCard'
@@ -57,9 +58,7 @@ export default function BookingsPage() {
         >
           {/* Left */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-azure flex items-center justify-center shadow-azure shrink-0">
-              <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
+            <PagePurposeAvatar variant="bookings" size={44} className="shrink-0" />
             <div className="min-w-0">
               <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-900 leading-tight truncate">
                 Bookings

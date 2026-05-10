@@ -37,8 +37,8 @@
   --shadow-card-lg: 0 8px 40px -4px rgba(0, 0, 0, 0.12), 0 4px 16px -4px rgba(0, 0, 0, 0.06);
 
   /* ── Gradients ── */
-  --background-image-gradient-brand:   linear-gradient(135deg, #D4722A 0%, #944A15 100%);
-  --background-image-gradient-gold:    linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  --background-image-gradient-brand:   linear-gradient(135deg, #D4722A 0%, #C4621A 100%);
+  --background-image-gradient-gold:    linear-gradient(135deg, #ECBC89 0%, #D4722A 100%);
   --background-image-gradient-premium: linear-gradient(135deg, #D4722A 0%, #8b5cf6 50%, #d97706 100%);
   --background-image-gradient-card:    linear-gradient(145deg, #ffffff 0%, #fdfaf6 100%);
 }
@@ -165,9 +165,9 @@
 
 @layer utilities {
   /* ── Gradients ── */
-  .gradient-brand   { background: linear-gradient(135deg, #D4722A 0%, #944A15 100%); }
-  .gradient-azure   { background: linear-gradient(135deg, #D4722A 0%, #944A15 100%); } /* alias */
-  .gradient-gold    { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
+  .gradient-brand   { background: linear-gradient(135deg, #D4722A 0%, #C4621A 100%); }
+  .gradient-azure   { background: linear-gradient(135deg, #D4722A 0%, #C4621A 100%); } /* alias */
+  .gradient-gold    { background: linear-gradient(135deg, #ECBC89 0%, #D4722A 100%); }
   .gradient-premium { background: linear-gradient(135deg, #D4722A 0%, #8b5cf6 50%, #d97706 100%); }
   .gradient-card    { background: linear-gradient(145deg, #ffffff 0%, #fdfaf6 100%); }
   .gradient-hero    { background: linear-gradient(135deg, #FDF8F3 0%, #FBF0E3 100%); }
@@ -177,7 +177,7 @@
   .shadow-azure     { box-shadow: 0 4px 24px -2px rgba(212, 114, 42, 0.28); } /* alias */
   .shadow-premium   { box-shadow: 0 4px 24px -2px rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.04); }
   .shadow-premium-lg{ box-shadow: 0 8px 40px -4px rgba(0,0,0,0.12), 0 4px 16px -4px rgba(0,0,0,0.06); }
-  .shadow-gold      { box-shadow: 0 4px 24px -2px rgba(245, 158, 11, 0.25); }
+  .shadow-gold      { box-shadow: 0 4px 24px -2px rgba(212, 114, 42, 0.22); }
 
   /* ── Text gradients ── */
   .text-gradient-brand {
@@ -193,7 +193,7 @@
     background-clip: text;
   }
   .text-gradient-gold {
-    background: linear-gradient(135deg, #fbbf24, #d97706);
+    background: linear-gradient(135deg, #D4722A, #C4621A);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

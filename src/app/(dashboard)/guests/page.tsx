@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { vipColors } from '@/lib/constants/colors'
 import { cn } from '@/lib/utils/cn'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 
 interface Guest {
   guest_id: number
@@ -55,13 +56,16 @@ export default function GuestsPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex items-start justify-between gap-4"
       >
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Guests</h1>
-          <p className="text-slate-500 mt-0.5">
-            All registered guests across properties
-          </p>
+        <div className="flex items-start gap-3 min-w-0">
+          <PagePurposeAvatar variant="guests" size={44} className="shrink-0 mt-0.5" />
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Guests</h1>
+            <p className="text-slate-500 mt-0.5">
+              All registered guests across properties
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-azure-50 border border-azure-100">
           <Users className="w-4 h-4 text-azure-600" />

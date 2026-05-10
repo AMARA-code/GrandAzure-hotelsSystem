@@ -68,16 +68,16 @@ const config: Config = {
 
         // ── Accent — Amber/Gold (use sparingly for highlights only) ──────
         gold: {
-          50:  "#fffbeb",
-          100: "#fef3c7",
-          200: "#fde68a",
-          300: "#fcd34d",
-          400: "#fbbf24",
-          500: "#f59e0b",
-          600: "#d97706",
-          700: "#b45309",
-          800: "#92400e",
-          900: "#78350f",
+          50:  "#FDF8F3",
+          100: "#FBF0E3",
+          200: "#F5D9BA",
+          300: "#ECBC89",
+          400: "#E09A58",
+          500: "#D4722A",
+          600: "#C4621A",
+          700: "#B85E1E",
+          800: "#944A15",
+          900: "#70370E",
         },
 
         // ── Semantic colours ─────────────────────────────────────────────
@@ -123,7 +123,7 @@ const config: Config = {
         "premium":    "0 4px 24px -2px rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.04)",
         "premium-lg": "0 8px 40px -4px rgba(0,0,0,0.12), 0 4px 16px -4px rgba(0,0,0,0.06)",
         "premium-xl": "0 20px 60px -8px rgba(0,0,0,0.15), 0 8px 24px -4px rgba(0,0,0,0.08)",
-        "gold":       "0 4px 24px -2px rgba(245,158,11,0.25)",
+        "gold":       "0 4px 24px -2px rgba(212,114,42,0.22)",
         "azure":      "0 4px 24px -2px rgba(212,114,42,0.25)",
         "card":       "0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06)",
         "card-hover": "0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.10)",
@@ -137,7 +137,7 @@ const config: Config = {
 
       backgroundImage: {
         "gradient-azure":   "linear-gradient(135deg, #D4722A 0%, #944A15 100%)",
-        "gradient-gold":    "linear-gradient(135deg, #fbbf24 0%, #d97706 100%)",
+        "gradient-gold":    "linear-gradient(135deg, #ECBC89 0%, #D4722A 100%)",
         "gradient-premium": "linear-gradient(135deg, #D4722A 0%, #8b5cf6 50%, #d97706 100%)",
         "gradient-card":    "linear-gradient(145deg, #ffffff 0%, #fdfaf6 100%)",
         "gradient-hero":    "linear-gradient(135deg, #FDF8F3 0%, #FBF0E3 100%)",

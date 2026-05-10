@@ -27,7 +27,7 @@ export default function PublicShell({ children, isAuthenticated, isStaff }: Publ
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-azure-50/25 to-background">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-card/70 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-card/85 backdrop-blur-xl shadow-premium">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Link href="/">
             <BrandMark />
@@ -59,7 +59,7 @@ export default function PublicShell({ children, isAuthenticated, isStaff }: Publ
                 >
                   {isStaff ? 'Dashboard' : 'My Account'}
                 </Link>
-                <Link href="/book" className="rounded-xl gradient-azure px-4 py-2 text-sm font-semibold text-white shadow-azure">
+                <Link href="/book" className="rounded-xl bg-[#D4722A] px-4 py-2 text-sm font-semibold text-white shadow-azure hover:bg-[#C4621A] transition-colors">
                   Book Now
                 </Link>
               </>
@@ -93,7 +93,7 @@ export default function PublicShell({ children, isAuthenticated, isStaff }: Publ
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm md:hidden"
+                className="fixed inset-x-0 bottom-0 top-14 z-40 bg-black/35 backdrop-blur-sm md:hidden"
                 onClick={() => setOpen(false)}
               />
               <motion.aside
@@ -102,18 +102,8 @@ export default function PublicShell({ children, isAuthenticated, isStaff }: Publ
                 animate={{ x: 0 }}
                 exit={{ x: -320 }}
                 transition={{ duration: 0.28, ease: 'easeInOut' }}
-                className="fixed left-0 top-0 z-50 h-full w-72 border-r border-border bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8] shadow-premium-lg md:hidden"
+                className="fixed left-0 top-14 z-50 h-[calc(100vh-56px)] w-72 border-r border-[#F3DCC0] bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8] backdrop-blur-md shadow-premium-lg md:hidden"
               >
-                <div className="flex h-16 items-center justify-between border-b border-border px-4">
-                  <BrandMark />
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
-                    aria-label="Close menu"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
                 <div className="space-y-1 p-4">
                   {navItems.map((item) => (
                     <Link
@@ -147,6 +137,14 @@ export default function PublicShell({ children, isAuthenticated, isStaff }: Publ
                       Sign Up
                     </Link>
                   )}
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="mt-4 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-[#F3DCC0] bg-[#FFF9F2] text-sm font-semibold text-[#944A15]"
+                    aria-label="Close menu"
+                  >
+                    <X className="h-4 w-4" />
+                    Close
+                  </button>
                 </div>
               </motion.aside>
             </>

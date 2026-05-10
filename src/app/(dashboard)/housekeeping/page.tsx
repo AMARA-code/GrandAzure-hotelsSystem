@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils/cn'
 import { formatDateTime } from '@/lib/utils/formatters'
 import { format } from 'date-fns'
 import { AddScheduleModal } from '@/components/housekeeping/AddScheduleModal'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   low:       { label: 'Low',       color: 'text-slate-600', bg: 'bg-slate-100', border: 'border-slate-200' },
@@ -209,9 +210,7 @@ export default function HousekeepingPage() {
           className="flex items-center justify-between mb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-200">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <PagePurposeAvatar variant="housekeeping" size={44} className="shadow-lg shadow-emerald-200/60" />
             <div>
               <h1 className="text-2xl font-bold font-display text-slate-900">Housekeeping</h1>
               <p className="text-sm text-slate-500">

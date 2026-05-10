@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { UtensilsCrossed, RefreshCw, Plus } from 'lucide-react'
+import { RefreshCw, Plus } from 'lucide-react'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 import { toast } from 'sonner'
 import FnBStatsCards from '@/components/restaurants/FnBStatsCards'
 import RestaurantCards from '@/components/restaurants/RestaurantCards'
@@ -55,17 +56,7 @@ export default function RestaurantsPage() {
 
           <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              {/* Icon box — terracotta solid */}
-              <div style={{
-                width: 56, height: 56,
-                borderRadius: 16,
-                background: 'linear-gradient(135deg, #D4722A 0%, #944A15 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: '0 4px 16px rgba(212,114,42,0.35)',
-              }}>
-                <UtensilsCrossed style={{ width: 26, height: 26, color: '#fff' }} />
-              </div>
+              <PagePurposeAvatar variant="restaurants" size={56} className="shrink-0" />
 
               <div>
                 <div style={{

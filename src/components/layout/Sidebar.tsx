@@ -3,11 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, X } from 'lucide-react'
+import { Bell, ChevronRight, Star, User } from 'lucide-react'
 import { navigation } from '@/lib/constants/navigation'
 import { cn } from '@/lib/utils/cn'
 import { useState, useEffect } from 'react'
-import BrandMark from '@/components/guest-portal/BrandMark'
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -139,13 +138,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="hidden lg:flex fixed left-0 top-0 h-full bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8] border-r border-border flex-col z-40 shadow-premium overflow-hidden"
+        className="hidden lg:flex fixed left-0 top-14 h-[calc(100vh-56px)] bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8] border-r border-border flex-col z-40 shadow-premium overflow-hidden"
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-border">
-          <BrandMark compact={!hovered} />
-        </div>
-
         <NavContent open={hovered} />
       </motion.aside>
 
@@ -165,9 +159,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={onMobileClose}
-              className="lg:hidden fixed left-0 right-0 bottom-0 z-20"
+              className="lg:hidden fixed left-0 right-0 bottom-0 z-30 top-14"
               style={{
-                top: 56,
                 background: 'rgba(15, 10, 5, 0.45)',
                 backdropFilter: 'blur(4px)',
                 WebkitBackdropFilter: 'blur(4px)',
@@ -175,9 +168,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             />
 
             {/*
-              Drawer — slides in from the left, starts at top-14 (56px),
-              sits below the topbar with no duplicate header/logo/close row.
-              z-30 keeps it above the backdrop but below the topbar.
+              Drawer — below the main topbar (top-14), no logo row (logo lives in desktop sidebar only).
+              z-40: above backdrop (z-30), below topbar (z-50).
             */}
             <motion.aside
               key="drawer"
@@ -185,25 +177,40 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               animate={{ x: 0 }}
               exit={{ x: -288 }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="lg:hidden fixed left-0 bottom-0 flex flex-col z-30"
-              style={{
-                top: 56,
-                width: 272,
-                /* Premium warm-cream — matches your existing desktop sidebar palette */
-                background: 'linear-gradient(160deg, #fffaf3 0%, #fdf5e8 50%, #f7f1e8 100%)',
-                borderRight: '1px solid #f0dfc0',
-                boxShadow: '8px 0 40px rgba(120,60,10,0.10), 2px 0 8px rgba(120,60,10,0.06)',
-              }}
+              className={cn(
+                'lg:hidden fixed left-0 top-14 bottom-0 z-40 flex w-[272px] flex-col overflow-hidden',
+                'border-r border-[#f0dfc0]',
+                'bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8]',
+                'backdrop-blur-md',
+                'shadow-premium-lg'
+              )}
             >
-              {/* Amber accent rule — visual continuation of the topbar gradient line */}
-              <div
-                className="w-full flex-shrink-0"
-                style={{
-                  height: 2,
-                  background: 'linear-gradient(90deg, #e8a264, #c97c3a, #f5c07a, #e8a264)',
-                }}
-              />
-
+              <div className="p-3 border-b border-[#f0dfc0]/90 bg-white/45 backdrop-blur-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/bookings"
+                    onClick={onMobileClose}
+                    className="flex items-center justify-between rounded-xl border border-[#f0dfc0] bg-[#fff9f2] px-3 py-2.5 text-xs font-semibold text-[#944A15] shadow-premium"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5" />
+                      Notifications
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                  </Link>
+                  <Link
+                    href="/staff"
+                    onClick={onMobileClose}
+                    className="flex items-center justify-between rounded-xl border border-[#f0dfc0] bg-[#fff9f2] px-3 py-2.5 text-xs font-semibold text-[#944A15] shadow-premium"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" />
+                      Profile
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                  </Link>
+                </div>
+              </div>
               <NavContent open={true} onLinkClick={onMobileClose} />
             </motion.aside>
           </>

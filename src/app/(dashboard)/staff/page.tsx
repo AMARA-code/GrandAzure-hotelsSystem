@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils/cn'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 import StaffDetailModal from '@/components/staff/StaffDetailModal'
 import AddStaffModal from '@/components/staff/AddStaffModal'
 
@@ -252,13 +253,16 @@ export default function StaffPage() {
           transition={{ duration: 0.35 }}
           className="mb-6 flex flex-wrap items-start justify-between gap-3"
         >
-          <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold text-slate-800 sm:text-2xl xl:text-3xl truncate">
-              Staff Management
-            </h1>
-            <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-              {stats.total} team members across {hotels.length} properties
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <PagePurposeAvatar variant="staff" size={42} className="mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="font-display text-xl font-bold text-slate-800 sm:text-2xl xl:text-3xl truncate">
+                Staff Management
+              </h1>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                {stats.total} team members across {hotels.length} properties
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <motion.button

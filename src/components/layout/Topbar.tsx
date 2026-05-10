@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Bell, ChevronDown, LogOut, User, Loader2, ArrowLeft, Mail, Shield, RefreshCw } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, User, Loader2, ArrowLeft, Mail, Shield, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import BrandMark from '@/components/guest-portal/BrandMark'
 
 interface TopbarProps {
   onMenuClick: () => void
@@ -210,28 +211,41 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const loopItems = [...tickerItems, ...tickerItems, ...tickerItems]
 
   return (
-    <header className="h-14 bg-white dark:bg-card border-b border-border sticky top-0 z-30">
+    <header className="h-14 bg-white/92 dark:bg-card/92 border-b border-border sticky top-0 z-50 backdrop-blur-md shadow-premium">
+
+      <div
+        className="pointer-events-none absolute left-0 top-0 h-full w-12"
+        style={{ background: 'linear-gradient(90deg, rgba(253,248,243,0.95), transparent)' }}
+      />
+      <div
+        className="pointer-events-none absolute right-0 top-0 h-full w-12"
+        style={{ background: 'linear-gradient(270deg, rgba(253,248,243,0.95), transparent)' }}
+      />
 
       <motion.div
         className="absolute bottom-0 left-0 right-0 h-[2px] pointer-events-none z-20"
         style={{
-          background: 'linear-gradient(90deg, #38bdf8, #818cf8, #f472b6, #34d399, #fbbf24, #f87171, #38bdf8)',
+          background: 'linear-gradient(90deg, #D4722A, #E09A58, #C4621A, #D4722A, #F5C9A8, #D4722A)',
           backgroundSize: '400% 100%',
         }}
         animate={{ backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
       />
 
-      <div className="flex items-center h-full gap-1 px-4">
+      <div className="flex items-center h-full gap-2 px-4">
 
-        {/* ── LEFT: hamburger ── */}
-        <div className="flex items-center flex-shrink-0">
+        {/* ── LEFT: brand (mobile toggles sidebar) ── */}
+        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
           <button
             onClick={onMenuClick}
-            className="lg:hidden w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted transition-all"
+            className="md:hidden flex items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4722A]/35"
+            aria-label="Open sidebar"
           >
-            <Menu className="w-4 h-4" />
+            <BrandMark compact />
           </button>
+          <div className="hidden md:flex items-center">
+            <BrandMark />
+          </div>
         </div>
 
         {/* ── CENTER: ticker pill (desktop) ── */}
@@ -277,15 +291,37 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
 
         {/* ── CENTER: mobile compact ── */}
         <div className="md:hidden flex-1 min-w-0">
-          <div className="mx-2 rounded-full border border-border bg-muted px-3 py-1.5 text-[11px] font-semibold text-muted-foreground truncate">
-            {loadingStats
-              ? 'Loading operations...'
-              : `Occupancy ${occupancyPct}% · Bookings ${stats?.confirmedBookings ?? 0}`}
+          <div className="relative mx-1.5 h-8 rounded-full border border-[#F3DCC0] bg-gradient-to-r from-[#FFF9F2] via-[#FDF8F3] to-[#FFF9F2] overflow-hidden shadow-premium">
+            <div className="absolute left-0 top-0 bottom-0 w-6 pointer-events-none" style={{ background: 'linear-gradient(to right, rgba(255,249,242,1), transparent)' }} />
+            <div className="absolute right-0 top-0 bottom-0 w-6 pointer-events-none" style={{ background: 'linear-gradient(to left, rgba(255,249,242,1), transparent)' }} />
+            {loadingStats ? (
+              <div className="h-full flex items-center gap-1.5 px-3 text-[10px] font-semibold text-[#B85E1E]">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Loading operations...
+              </div>
+            ) : (
+              <motion.div
+                className="h-full flex items-center whitespace-nowrap will-change-transform"
+                animate={{ x: ['0%', '-33.333%'] }}
+                transition={{ duration: 26, repeat: Infinity, ease: 'linear' }}
+              >
+                {[...loopItems, ...loopItems].map((item, i) => (
+                  <div key={`m-${i}`} className="flex items-center flex-shrink-0">
+                    <div className="flex items-center gap-1 px-2.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.11em] text-[#8C6A4F]">{item.label}</span>
+                      <span className="text-[9px] text-[#C4A882]">·</span>
+                      <span className={`text-[10.5px] font-bold ${item.accent}`}>{item.value}</span>
+                    </div>
+                    <div className="w-px h-3 bg-[#F3DCC0]" />
+                  </div>
+                ))}
+              </motion.div>
+            )}
           </div>
         </div>
 
         {/* ── RIGHT: bell + user ── */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
 
           {/* Bell */}
           <div ref={notifDropdownRef} className="relative">

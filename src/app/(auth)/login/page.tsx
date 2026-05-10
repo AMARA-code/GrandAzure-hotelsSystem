@@ -132,10 +132,7 @@ export default function LoginPage() {
 
             {/* Brand */}
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-[#ead8c4] bg-white/70 px-4 py-2.5 backdrop-blur-sm shadow-sm">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4722a] to-[#b85e1f] flex items-center justify-center">
-                  <Star className="h-3.5 w-3.5 text-white fill-white" />
-                </div>
+              <div className="inline-flex items-center rounded-2xl border border-[#ead8c4] bg-white/70 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                 <BrandMark />
               </div>
             </div>

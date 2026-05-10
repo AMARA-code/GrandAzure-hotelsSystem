@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils/cn'
 import { RoomsGrid } from '@/components/rooms/RoomsGrid'
 import { RoomDetailModal } from '@/components/rooms/RoomDetailModal'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 
 const STATUS_FILTERS = [
   { value: 'all',       label: 'All Rooms'  },
@@ -131,11 +132,9 @@ setStats({
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 mb-6"
+          className="flex items-start gap-3 mb-6"
         >
-          <div className="w-10 h-10 rounded-xl gradient-azure flex items-center justify-center shadow-azure">
-            <BedDouble className="w-5 h-5 text-white" />
-          </div>
+          <PagePurposeAvatar variant="rooms" size={44} className="shrink-0 mt-0.5" />
           <div>
             <h1 className="text-2xl font-bold font-display text-slate-900">Room Management</h1>
             <p className="text-sm text-slate-500">Real-time room status across all properties</p>

@@ -10,6 +10,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
 import { createBrowserClient } from "@supabase/ssr";
+import { PagePurposeAvatar } from "@/components/layout/PagePurposeAvatar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface Review {
@@ -430,13 +431,16 @@ export default function ReviewsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient-azure leading-tight">
-              Guest Reviews
-            </h1>
-            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-              Monitor and respond to guest feedback across all properties
-            </p>
+          <div className="flex items-start gap-3 min-w-0">
+            <PagePurposeAvatar variant="reviews" size={44} className="shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient-azure leading-tight">
+                Guest Reviews
+              </h1>
+              <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+                Monitor and respond to guest feedback across all properties
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 bg-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-premium border border-slate-100 self-start xs:self-auto shrink-0">
             <Star className="w-4 h-4 sm:w-5 sm:h-5 text-gold-500 fill-gold-500" />

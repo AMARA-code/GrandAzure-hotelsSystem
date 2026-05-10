@@ -8,6 +8,7 @@ import TransactionsTable from "@/components/loyalty/TransactionsTable";
 import TierBreakdown from "@/components/loyalty/TierBreakdown";
 import PointsChart from "@/components/loyalty/PointsChart";
 import LoyaltyStats from "@/components/loyalty/LoyaltyStats";
+import { PagePurposeAvatar } from "@/components/layout/PagePurposeAvatar";
 
 interface LoyaltyClientProps {
   members: any[];
@@ -50,13 +51,16 @@ export default function LoyaltyClient({
         transition={{ duration: 0.45 }}
         className="flex flex-col sm:flex-row sm:items-end justify-between gap-3"
       >
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
-            Loyalty Program
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Grand Azure Rewards — member points, tiers &amp; transactions
-          </p>
+        <div className="flex items-start gap-3 min-w-0">
+          <PagePurposeAvatar variant="loyalty" size={44} className="shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
+              Loyalty Program
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Grand Azure Rewards — member points, tiers &amp; transactions
+            </p>
+          </div>
         </div>
 
         {/* Tier pills summary */}

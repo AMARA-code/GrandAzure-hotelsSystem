@@ -24,6 +24,7 @@ import {
 import { createBrowserClient } from "@supabase/ssr";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/cn";
+import { PagePurposeAvatar } from "@/components/layout/PagePurposeAvatar";
 import { toast } from "sonner";
 import {
   AddItemModal,
@@ -290,10 +291,13 @@ export default function InventoryPage() {
       <div className="max-w-[1600px] mx-auto space-y-5 sm:space-y-6">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-800">Inventory Management</h1>
-            <p className="text-slate-500 text-sm mt-1">Track stock levels, suppliers and reorder alerts across all properties</p>
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <PagePurposeAvatar variant="inventory" size={44} className="shrink-0 mt-0.5" />
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-800">Inventory Management</h1>
+              <p className="text-slate-500 text-sm mt-1">Track stock levels, suppliers and reorder alerts across all properties</p>
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600 transition-all text-sm shadow-sm">

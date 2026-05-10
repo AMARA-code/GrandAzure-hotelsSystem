@@ -1,16 +1,19 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, ArrowRight, Sparkles, Star, CheckCircle2, RotateCcw, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Mail, ArrowRight, Sparkles, CheckCircle2, RotateCcw, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import BrandMark from '@/components/guest-portal/BrandMark'
 
 type Step = 'request' | 'sent' | 'reset' | 'success'
 
 export default function ForgotPasswordPage() {
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>('request')
   const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -19,6 +22,48 @@ export default function ForgotPasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    const stepParam = searchParams.get('step')
+    const queryType = searchParams.get('type')
+
+    if (stepParam === 'reset') setStep('reset')
+
+    const bootstrapRecovery = async () => {
+      const supabase = createClient()
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          toast.error('Reset link is invalid or expired. Request a new one.')
+          return
+        }
+        setStep('reset')
+        return
+      }
+
+      // Some providers return recovery info in hash fragment.
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+        const hashType = hash.get('type')
+        const accessToken = hash.get('access_token')
+        const refreshToken = hash.get('refresh_token')
+
+        if (hashType === 'recovery' && accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (!error) setStep('reset')
+        }
+      }
+
+      if (queryType === 'recovery') setStep('reset')
+    }
+
+    bootstrapRecovery()
+  }, [searchParams])
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -49,9 +94,10 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     try {
       const supabase = createClient()
-      await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/forgot-password?step=reset`,
       })
+      if (error) { toast.error(error.message); return }
       toast.success('Reset link resent to your inbox.')
     } finally {
       setLoading(false)
@@ -170,11 +216,8 @@ export default function ForgotPasswordPage() {
 
             {/* Brand */}
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-[#ead8c4] bg-white/70 px-4 py-2.5 backdrop-blur-sm shadow-sm">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4722a] to-[#b85e1f] flex items-center justify-center">
-                  <Star className="h-3.5 w-3.5 text-white fill-white" />
-                </div>
-                <span className="font-display text-base font-bold text-stone-800">Grand <span className="text-[#d4722a]">Azure</span></span>
+              <div className="inline-flex items-center rounded-2xl border border-[#ead8c4] bg-white/70 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                <BrandMark />
               </div>
             </div>
 
@@ -245,7 +288,7 @@ export default function ForgotPasswordPage() {
 
             {/* Mobile brand */}
             <div className="flex lg:hidden justify-center mb-6">
-              <span className="font-display text-2xl font-bold text-stone-900">Grand <span className="text-[#d4722a]">Azure</span></span>
+              <BrandMark />
             </div>
 
             <AnimatePresence mode="wait">

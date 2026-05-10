@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Wrench, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { toast } from 'sonner'
 import MaintenanceStats from '@/components/maintenance/MaintenanceStats'
 import MaintenanceTable from '@/components/maintenance/MaintenanceTable'
 import MaintenanceRequestModal from '@/components/maintenance/MaintenanceRequestModal'
 import MaintenanceDetailDrawer from '@/components/maintenance/MaintenanceDetailDrawer'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 
 interface MaintenanceRequest {
   request_id: number
@@ -161,9 +162,7 @@ export default function MaintenancePage() {
         >
           {/* Left: icon + title */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-azure shrink-0">
-              <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
+            <PagePurposeAvatar variant="maintenance" size={44} className="shrink-0" />
             <div className="min-w-0">
               <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-900 font-display leading-tight truncate">
                 Maintenance

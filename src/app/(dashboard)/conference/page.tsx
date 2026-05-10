@@ -12,6 +12,7 @@ import {
 import { format, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils/cn";
 import { createBrowserClient } from "@supabase/ssr";
+import { PagePurposeAvatar } from "@/components/layout/PagePurposeAvatar";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ConferenceHall {
@@ -435,13 +436,16 @@ export default function ConferencePage() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient-azure leading-tight">
-              Conference & Events
-            </h1>
-            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-              Manage halls, bookings, and events across all properties
-            </p>
+          <div className="flex items-start gap-3 min-w-0">
+            <PagePurposeAvatar variant="conference" size={44} className="shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient-azure leading-tight">
+                Conference &amp; Events
+              </h1>
+              <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+                Manage halls, bookings, and events across all properties
+              </p>
+            </div>
           </div>
           <button className="flex items-center gap-2 gradient-azure text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-azure hover:shadow-azure-lg transition-all self-start xs:self-auto shrink-0">
             <Plus className="w-4 h-4" />

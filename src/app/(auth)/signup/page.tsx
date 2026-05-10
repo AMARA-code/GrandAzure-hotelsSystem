@@ -5,9 +5,10 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Sparkles, Star, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import BrandMark from '@/components/guest-portal/BrandMark'
 
 type PasswordStrength = 'empty' | 'weak' | 'fair' | 'good' | 'strong'
 
@@ -162,11 +163,8 @@ export default function SignupPage() {
 
             {/* Brand */}
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-[#ead8c4] bg-white/70 px-4 py-2.5 backdrop-blur-sm shadow-sm">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4722a] to-[#b85e1f] flex items-center justify-center">
-                  <Star className="h-3.5 w-3.5 text-white fill-white" />
-                </div>
-                <span className="font-display text-base font-bold text-stone-800">Grand <span className="text-[#d4722a]">Azure</span></span>
+              <div className="inline-flex items-center rounded-2xl border border-[#ead8c4] bg-white/70 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                <BrandMark />
               </div>
             </div>
 
@@ -229,7 +227,7 @@ export default function SignupPage() {
 
             {/* Mobile brand */}
             <div className="flex lg:hidden justify-center mb-6">
-              <span className="font-display text-2xl font-bold text-stone-900">Grand <span className="text-[#d4722a]">Azure</span></span>
+              <BrandMark />
             </div>
 
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

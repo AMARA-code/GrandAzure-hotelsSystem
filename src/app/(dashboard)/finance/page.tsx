@@ -16,6 +16,7 @@ import {
 } from 'recharts'
 import { cn } from '@/lib/utils/cn'
 import { formatCurrency } from '@/lib/utils/formatters'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Invoice {
@@ -471,14 +472,14 @@ export default function FinancePage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 gradient-azure rounded-xl flex items-center justify-center shadow-azure">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 font-display">Finance & Invoicing</h1>
+          <div className="flex items-start gap-3">
+            <PagePurposeAvatar variant="finance" size={44} className="shadow-sm shrink-0 mt-0.5" />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 font-display">
+                Finance &amp; Invoicing
+              </h1>
+              <p className="text-slate-500 text-sm mt-0.5">Revenue overview across all properties</p>
             </div>
-            <p className="text-slate-500 text-sm pl-13">Revenue overview across all properties</p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={fetchData}

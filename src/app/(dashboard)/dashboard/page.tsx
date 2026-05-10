@@ -1,7 +1,6 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useEffect } from 'react'
 import {
   TrendingUp, BedDouble, CalendarCheck,
   LogOut, Wrench, Sparkles, DollarSign, Users
@@ -12,26 +11,12 @@ import OccupancyChart from '@/components/dashboard/OccupancyChart'
 import TodayArrivals from '@/components/dashboard/TodayArrivals'
 import RecentBookings from '@/components/dashboard/RecentBookings'
 import QuickActions from '@/components/dashboard/QuickActions'
+import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 import { useDashboardStats } from '@/lib/hooks/useDashboard'
 import { formatCurrency } from '@/lib/utils/formatters'
-import { createClient } from '@/lib/supabase/client'
 
 export default function DashboardPage() {
   const { stats, loading } = useDashboardStats()
-
-  // TEMPORARY DEBUG — remove after fixing
-  useEffect(() => {
-    const debug = async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('booking_id')
-        .limit(5)
-      console.log('✅ Supabase bookings test:', data)
-      console.log('❌ Supabase error:', error)
-    }
-    debug()
-  }, [])
 
   const statCards = [
     {
@@ -128,9 +113,11 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-center justify-between"
+        className="flex items-center justify-between gap-4"
       >
-        <div>
+        <div className="flex items-start gap-3 min-w-0">
+          <PagePurposeAvatar variant="dashboard" size={44} className="mt-0.5 shrink-0" />
+          <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900">
             Good {getGreeting()},{' '}
             <span className="text-gradient-azure">Grand Azure</span>
@@ -143,6 +130,7 @@ export default function DashboardPage() {
               day: 'numeric',
             })}
           </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200">
