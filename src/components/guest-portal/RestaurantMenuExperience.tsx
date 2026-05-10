@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Clock,
   ArrowRight,
-  Leaf,
   Award,
   Phone,
 } from 'lucide-react'
@@ -138,7 +137,7 @@ export default function RestaurantMenuExperience({
   const [cart, setCart] = useState<Record<string, CartLine>>({})
   const heroRef = useRef<HTMLDivElement>(null)
   const { scrollY } = useScroll()
-  const heroParallaxY = useTransform(scrollY, [0, 400], [0, 60])
+  const heroParallaxY = useTransform(scrollY, [0, 300], [0, 30])
 
   const allCategories = useMemo(() => [{ id: 'all', name: 'All', items: [] as MenuItem[] }, ...DEFAULT_MENU.categories], [])
   const categoriesToRender = useMemo(() => {
@@ -201,22 +200,21 @@ export default function RestaurantMenuExperience({
         .hero-wrapper {
           position: relative;
           overflow: hidden;
-          min-height: 100vh;
+          min-height: 420px;
           display: flex;
           align-items: center;
-          background: #08050200;
+          background: #FFF8F2;
         }
-        @media (min-width: 768px) { .hero-wrapper { min-height: 100vh; } }
+        @media (min-width: 768px) { .hero-wrapper { min-height: 480px; } }
 
-        /* Layered overlays for depth */
         .hero-ov-base {
           position: absolute; inset: 0;
           background: linear-gradient(
             to right,
-            rgba(5,3,2,0.82) 0%,
-            rgba(5,3,2,0.55) 38%,
-            rgba(5,3,2,0.18) 68%,
-            rgba(5,3,2,0.42) 100%
+            rgba(255,248,242,0.96) 0%,
+            rgba(255,248,242,0.84) 42%,
+            rgba(255,248,242,0.54) 68%,
+            rgba(255,248,242,0.72) 100%
           );
           z-index: 1;
         }
@@ -224,9 +222,9 @@ export default function RestaurantMenuExperience({
           position: absolute; inset: 0;
           background: linear-gradient(
             to top,
-            rgba(5,3,2,0.88) 0%,
-            rgba(5,3,2,0.38) 22%,
-            transparent 50%
+            rgba(255,248,242,0.98) 0%,
+            rgba(255,248,242,0.32) 18%,
+            transparent 40%
           );
           z-index: 2;
         }
@@ -234,253 +232,99 @@ export default function RestaurantMenuExperience({
           position: absolute; inset: 0;
           background: linear-gradient(
             to bottom,
-            rgba(5,3,2,0.52) 0%,
-            transparent 28%
+            rgba(255,248,242,0.72) 0%,
+            transparent 22%
           );
           z-index: 2;
         }
-        .hero-grain {
-          position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.38;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
-        }
 
-        /* Horizontal divider line — purely decorative */
         .hero-rule {
           display: none;
-          position: absolute;
-          top: 50%;
-          right: 0;
-          width: 28%;
-          height: 1px;
-          background: linear-gradient(to left, transparent, rgba(196,137,74,0.22));
+          position: absolute; top: 50%; right: 0;
+          width: 28%; height: 1px;
+          background: linear-gradient(to left, transparent, rgba(196,137,74,0.18));
           z-index: 4;
         }
         @media (min-width: 900px) { .hero-rule { display: block; } }
 
-        /* Inner layout */
         .hero-inner {
-          position: relative;
-          z-index: 5;
-          width: 100%;
-          padding: 7rem 0 6rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0;
+          position: relative; z-index: 5; width: 100%;
+          padding: 3.5rem 0 3.5rem;
+          display: flex; flex-direction: column; gap: 0;
         }
         @media (min-width: 900px) {
-          .hero-inner {
-            flex-direction: row;
-            align-items: center;
-            padding: 8rem 0 6rem;
-          }
+          .hero-inner { flex-direction: row; align-items: center; padding: 4rem 0 4rem; }
           .hero-left  { flex: 0 0 58%; }
           .hero-right { flex: 1; display: flex !important; justify-content: flex-end; padding-right: 1rem; }
         }
         .hero-right { display: none; }
 
-        /* Eyebrow */
-        .hero-eyebrow {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 1.6rem;
-        }
-        .hero-eyebrow-line {
-          width: 32px;
-          height: 1px;
-          background: #C4894A;
-          flex-shrink: 0;
-        }
-        .hero-eyebrow-text {
-          font-size: 0.6rem;
-          letter-spacing: 0.26em;
-          text-transform: uppercase;
-          color: #C4894A;
-          font-weight: 500;
-        }
+        .hero-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 1.2rem; }
+        .hero-eyebrow-line { width: 28px; height: 1px; background: #C4894A; flex-shrink: 0; }
+        .hero-eyebrow-text { font-size: 0.6rem; letter-spacing: 0.26em; text-transform: uppercase; color: #C4894A; font-weight: 600; }
 
-        /* Headline */
         .hero-h1 {
           font-family: 'Playfair Display', Georgia, serif;
-          font-size: clamp(3rem, 7vw, 5.2rem);
-          line-height: 1.0;
-          font-weight: 400;
-          letter-spacing: -0.025em;
-          color: #F2EAD8;
-          display: block;
-          margin-bottom: 0.04em;
+          font-size: clamp(2rem, 5vw, 3.4rem);
+          line-height: 1.05; font-weight: 400; letter-spacing: -0.025em;
+          color: #1C1917; display: block; margin-bottom: 0.04em;
         }
         .hero-h1-italic {
           font-family: 'Playfair Display', Georgia, serif;
-          font-size: clamp(3rem, 7vw, 5.2rem);
-          line-height: 1.0;
-          font-weight: 400;
-          font-style: italic;
-          letter-spacing: -0.025em;
-          color: #C4894A;
-          display: block;
-          text-shadow: 0 0 60px rgba(196,137,74,0.28);
+          font-size: clamp(2rem, 5vw, 3.4rem);
+          line-height: 1.05; font-weight: 400; font-style: italic;
+          letter-spacing: -0.025em; color: #C4894A; display: block;
         }
 
-        .hero-divider {
-          width: 44px;
-          height: 1px;
-          background: rgba(196,137,74,0.4);
-          margin: 1.6rem 0;
-        }
+        .hero-divider { width: 36px; height: 1px; background: rgba(196,137,74,0.35); margin: 1.1rem 0; }
 
         .hero-sub {
-          font-size: clamp(0.82rem, 1.6vw, 0.92rem);
-          color: rgba(242,234,216,0.58);
-          line-height: 1.95;
-          max-width: 360px;
-          font-weight: 300;
-          letter-spacing: 0.01em;
-          margin-bottom: 2rem;
+          font-size: clamp(0.8rem, 1.4vw, 0.88rem);
+          color: #78716C; line-height: 1.9;
+          max-width: 340px; font-weight: 400; letter-spacing: 0.01em; margin-bottom: 1.5rem;
         }
 
-        /* CTA buttons */
         .hero-btn-primary {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          background: #C4894A;
-          color: #1a0e05;
-          border: none;
-          padding: 14px 32px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.75rem;
-          font-weight: 600;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          border-radius: 2px;
-          cursor: pointer;
+          display: inline-flex; align-items: center; gap: 10px;
+          background: #D4722A; color: #fff; border: none;
+          padding: 12px 28px; font-family: 'DM Sans', sans-serif;
+          font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em;
+          text-transform: uppercase; border-radius: 2px; cursor: pointer;
           transition: background 0.22s, transform 0.18s;
         }
-        .hero-btn-primary:hover { background: #d49a5e; transform: translateY(-2px); }
+        .hero-btn-primary:hover { background: #B85E20; transform: translateY(-2px); }
 
-        .hero-btn-ghost {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          background: none;
-          border: 1px solid rgba(196,137,74,0.38);
-          color: rgba(242,234,216,0.68);
-          padding: 14px 28px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.75rem;
-          font-weight: 400;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          border-radius: 2px;
-          cursor: pointer;
-          transition: border-color 0.22s, color 0.22s, transform 0.18s;
-        }
-        .hero-btn-ghost:hover {
-          border-color: rgba(196,137,74,0.75);
-          color: rgba(242,234,216,0.95);
-          transform: translateY(-2px);
-        }
+        .hero-dots { display: flex; align-items: center; gap: 8px; margin-top: 1.75rem; }
 
-        /* Dot nav */
-        .hero-dots {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 3rem;
-        }
-
-        /* Bottom meta bar */
         .hero-meta-bar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          z-index: 6;
-          border-top: 1px solid rgba(196,137,74,0.10);
-          padding: 1.2rem 2.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1rem;
-          background: rgba(5,3,2,0.28);
-          backdrop-filter: blur(8px);
+          position: absolute; bottom: 0; left: 0; right: 0; z-index: 6;
+          border-top: 1px solid rgba(196,137,74,0.14);
+          padding: 0.85rem 2.5rem;
+          display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+          background: rgba(255,248,242,0.88); backdrop-filter: blur(8px);
         }
         @media (max-width: 640px) {
-          .hero-meta-bar { padding: 1rem 1.25rem; }
+          .hero-meta-bar { padding: 0.75rem 1.25rem; }
           .hero-meta-right { display: none; }
         }
+        .hero-meta-stat { display: flex; flex-direction: column; gap: 3px; }
+        .hero-meta-label { font-size: 0.5rem; letter-spacing: 0.22em; text-transform: uppercase; color: #C4894A; font-weight: 600; }
+        .hero-meta-value { font-size: 0.72rem; color: #78716C; font-weight: 400; }
+        .hero-meta-sep { width: 1px; height: 22px; background: rgba(196,137,74,0.2); flex-shrink: 0; }
 
-        .hero-meta-stat {
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-        }
-        .hero-meta-label {
-          font-size: 0.5rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(196,137,74,0.52);
-          font-weight: 500;
-        }
-        .hero-meta-value {
-          font-size: 0.72rem;
-          color: rgba(242,234,216,0.68);
-          font-weight: 300;
-        }
-        .hero-meta-sep {
-          width: 1px;
-          height: 26px;
-          background: rgba(196,137,74,0.16);
-          flex-shrink: 0;
-        }
-
-        /* Right panel — open/cuisine info */
-        .hero-info-panel {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          align-items: flex-end;
-        }
+        .hero-info-panel { display: flex; flex-direction: column; gap: 14px; align-items: flex-end; }
         .hero-status-card {
-          background: rgba(5,3,2,0.55);
-          border: 1px solid rgba(196,137,74,0.18);
-          border-radius: 4px;
-          padding: 18px 22px;
-          backdrop-filter: blur(12px);
-          min-width: 200px;
+          background: rgba(255,255,255,0.88);
+          border: 1px solid rgba(196,137,74,0.22);
+          border-radius: 4px; padding: 16px 20px;
+          backdrop-filter: blur(12px); min-width: 200px;
+          box-shadow: 0 4px 20px rgba(196,137,74,0.08);
         }
         .hero-vertical-tag {
-          writing-mode: vertical-rl;
-          text-orientation: mixed;
-          font-size: 0.52rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(196,137,74,0.55);
-          padding: 16px 8px;
-          border: 1px solid rgba(196,137,74,0.14);
-          border-radius: 2px;
-          white-space: nowrap;
-        }
-
-        /* Scroll indicator */
-        .hero-scroll {
-          position: absolute;
-          bottom: 5rem;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 6;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-        @media (max-width: 640px) { .hero-scroll { display: none; } }
-        .hero-scroll-text {
-          font-size: 0.48rem;
-          letter-spacing: 0.24em;
-          text-transform: uppercase;
-          color: rgba(196,137,74,0.42);
+          writing-mode: vertical-rl; text-orientation: mixed;
+          font-size: 0.52rem; letter-spacing: 0.22em; text-transform: uppercase;
+          color: rgba(196,137,74,0.65); padding: 14px 8px;
+          border: 1px solid rgba(196,137,74,0.18); border-radius: 2px; white-space: nowrap;
         }
 
         /* ── Controls card ── */
@@ -528,9 +372,6 @@ export default function RestaurantMenuExperience({
         .cart-sheet { background: #FAFAF7; border-radius: 24px 24px 0 0; overflow: hidden; width: 100%; max-width: 480px; }
         @media (min-width: 640px) { .cart-sheet { border-radius: 24px; } }
 
-        .private-card { border-radius: 20px; overflow: hidden; position: relative; background: linear-gradient(135deg, #FFF4ED 0%, #FDF0FF 100%); border: 1.5px solid #F5C9A8; }
-        @media (min-width: 768px) { .private-card { border-radius: 28px; } }
-
         .btn-add { display: inline-flex; align-items: center; gap: 6px; background: #D4722A; color: #fff; border: none; border-radius: 10px; padding: 0.5rem 1.1rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(212,114,42,0.30); transition: background 0.18s, box-shadow 0.18s, transform 0.12s; font-family: inherit; }
         .btn-add:hover { background: #B85E20; box-shadow: 0 6px 20px rgba(212,114,42,0.45); }
         .btn-add:active { transform: scale(0.97); }
@@ -560,11 +401,10 @@ export default function RestaurantMenuExperience({
           </AnimatePresence>
         </div>
 
-        {/* ── Overlay layers ── */}
+        {/* ── Light overlay layers ── */}
         <div className="hero-ov-base" />
         <div className="hero-ov-bottom" />
         <div className="hero-ov-top" />
-        <div className="hero-grain" />
         <div className="hero-rule" />
 
         {/* ── Content ── */}
@@ -598,10 +438,10 @@ export default function RestaurantMenuExperience({
                     <motion.div
                       key={i}
                       variants={{
-                        hidden: { opacity: 0, y: 52, skewY: 4 },
+                        hidden: { opacity: 0, y: 40, skewY: 3 },
                         visible: { opacity: 1, y: 0, skewY: 0 },
                       }}
-                      transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
+                      transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
                     >
                       {i === 0
                         ? <span className="hero-h1">{line}</span>
@@ -633,18 +473,18 @@ export default function RestaurantMenuExperience({
                   }
                 </motion.p>
 
-                {/* CTAs */}
+                {/* Single CTA — scrolls to menu */}
                 <motion.div
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 0.88, ease: [0.22, 1, 0.36, 1] }}
                   style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
                 >
-                  <button className="hero-btn-primary">
+                  <button
+                    className="hero-btn-primary"
+                    onClick={() => document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  >
                     Explore Menu
-                  </button>
-                  <button className="hero-btn-ghost">
-                    Reserve a Table
                   </button>
                 </motion.div>
 
@@ -653,15 +493,15 @@ export default function RestaurantMenuExperience({
                   className="hero-dots"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 1.1, duration: 0.6 }}
+                  transition={{ delay: 1.0, duration: 0.6 }}
                 >
                   {HERO_IMAGES.map((_, i) => (
                     <motion.button
                       key={i}
                       onClick={() => setHeroImg(i)}
                       animate={{
-                        width: i === heroImg ? 40 : 20,
-                        background: i === heroImg ? '#C4894A' : 'rgba(196,137,74,0.28)',
+                        width: i === heroImg ? 36 : 16,
+                        background: i === heroImg ? '#C4894A' : 'rgba(196,137,74,0.25)',
                       }}
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       style={{
@@ -711,24 +551,24 @@ export default function RestaurantMenuExperience({
                             />
                             <div style={{ position: 'absolute', inset: 1, borderRadius: '50%', background: isOpen ? '#4ADE80' : '#F87171' }} />
                           </div>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: isOpen ? '#4ADE80' : '#F87171', letterSpacing: '0.04em' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: isOpen ? '#16A34A' : '#DC2626', letterSpacing: '0.04em' }}>
                             {isOpen ? 'Currently Open' : 'Currently Closed'}
                           </span>
                         </div>
                         {activeRestaurant?.open_time && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-                            <Clock style={{ width: 11, height: 11, color: 'rgba(196,137,74,0.6)', flexShrink: 0 }} />
-                            <span style={{ fontSize: '0.68rem', color: 'rgba(242,234,216,0.52)', fontWeight: 300 }}>
+                            <Clock style={{ width: 11, height: 11, color: '#C4894A', flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.68rem', color: '#78716C', fontWeight: 400 }}>
                               {activeRestaurant.open_time} – {activeRestaurant.close_time}
                             </span>
                           </div>
                         )}
-                        <div style={{ borderTop: '1px solid rgba(196,137,74,0.12)', paddingTop: 10 }}>
-                          <p style={{ fontSize: '0.72rem', fontWeight: 500, color: 'rgba(242,234,216,0.72)', marginBottom: 3 }}>
+                        <div style={{ borderTop: '1px solid rgba(196,137,74,0.15)', paddingTop: 10 }}>
+                          <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#44403C', marginBottom: 3 }}>
                             {activeRestaurant?.restaurant_name ?? 'Grand Azure'}
                           </p>
                           {activeRestaurant?.city && (
-                            <p style={{ fontSize: '0.62rem', color: 'rgba(196,137,74,0.6)', fontWeight: 300 }}>
+                            <p style={{ fontSize: '0.62rem', color: '#C4894A', fontWeight: 400 }}>
                               {activeRestaurant.city}
                             </p>
                           )}
@@ -743,17 +583,17 @@ export default function RestaurantMenuExperience({
                   {(activeRestaurant?.cuisine_type
                     ? activeRestaurant.cuisine_type.split(',').map(s => s.trim()).filter(Boolean)
                     : ['Continental', 'Asian Fusion', 'Grill']
-                  ).map((tag, i) => (
+                  ).map((tag) => (
                     <span
                       key={tag}
                       style={{
-                        background: 'rgba(5,3,2,0.45)',
-                        border: '1px solid rgba(196,137,74,0.22)',
+                        background: 'rgba(255,255,255,0.80)',
+                        border: '1px solid rgba(196,137,74,0.28)',
                         borderRadius: 2,
                         padding: '4px 12px',
                         fontSize: '0.6rem',
-                        fontWeight: 500,
-                        color: 'rgba(196,137,74,0.75)',
+                        fontWeight: 600,
+                        color: '#C4894A',
                         letterSpacing: '0.12em',
                         textTransform: 'uppercase',
                         backdropFilter: 'blur(8px)',
@@ -768,36 +608,21 @@ export default function RestaurantMenuExperience({
           </div>
         </div>
 
-        {/* ── Scroll indicator ── */}
-        <motion.div
-          className="hero-scroll"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.6, duration: 0.8 }}
-        >
-          <span className="hero-scroll-text">Scroll</span>
-          <motion.div
-            animate={{ scaleY: [1, 1.1, 1], opacity: [0.4, 0.9, 0.4] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(196,137,74,0.7), transparent)' }}
-          />
-        </motion.div>
-
         {/* ── Bottom meta bar ── */}
         <motion.div
           className="hero-meta-bar"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 1.0, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ display: 'flex' }}>
               {['🧑‍🍳', '👨‍🍳', '👩‍🍳'].map((e, i) => (
-                <span key={i} style={{ fontSize: '1rem', marginLeft: i > 0 ? -5 : 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>{e}</span>
+                <span key={i} style={{ fontSize: '1rem', marginLeft: i > 0 ? -5 : 0 }}>{e}</span>
               ))}
             </div>
-            <span style={{ fontSize: '0.68rem', color: 'rgba(242,234,216,0.5)', fontWeight: 300 }}>
-              Trusted by <strong style={{ color: 'rgba(242,234,216,0.75)', fontWeight: 500 }}>800+</strong> guests daily
+            <span style={{ fontSize: '0.68rem', color: '#A8A29E', fontWeight: 400 }}>
+              Trusted by <strong style={{ color: '#44403C', fontWeight: 600 }}>800+</strong> guests daily
             </span>
           </div>
 
@@ -900,7 +725,7 @@ export default function RestaurantMenuExperience({
       </div>
 
       {/* ══════════════════ MENU SECTIONS ══════════════════ */}
-      <section className="sec">
+      <section className="sec" id="menu-section">
         <div className="pg">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5rem' }}>
             {categoriesToRender.map((cat, catIdx) => (
@@ -978,39 +803,6 @@ export default function RestaurantMenuExperience({
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ══════════════════ PRIVATE DINING ══════════════════ */}
-      <section style={{ padding: '0 1.25rem 4rem' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <motion.div className="private-card" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
-            <div style={{ position: 'absolute', top: -60, right: -60, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,114,42,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: -50, left: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,51,234,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', padding: '2.5rem 2rem' }}>
-              <motion.div style={{ fontSize: '5rem', flexShrink: 0, transformStyle: 'preserve-3d', filter: 'drop-shadow(0 24px 48px rgba(212,114,42,0.3))' }} animate={{ rotateY: [0, 20, -12, 0], rotateX: [0, -10, 8, 0], y: [0, -14, 6, 0] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}>🍽️</motion.div>
-              <div style={{ flex: '1 1 260px' }}>
-                <span style={{ fontSize: '0.66rem', letterSpacing: '0.16em', color: '#D4722A', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Private Dining</span>
-                <h2 className="serif" style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', marginBottom: '0.6rem' }}>Reserve a table for<br /><em style={{ color: '#D4722A', fontStyle: 'italic' }}>special occasions</em></h2>
-                <p style={{ fontSize: '0.85rem', color: '#78716C', lineHeight: 1.75, maxWidth: 380, marginBottom: '1.5rem' }}>Bespoke menus, floral arrangements, and dedicated staff for your most memorable moments.</p>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <motion.button whileHover={{ scale: 1.04, boxShadow: '0 12px 32px rgba(212,114,42,0.35)' }} whileTap={{ scale: 0.97 }} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#D4722A', color: '#fff', padding: '11px 26px', borderRadius: 12, fontSize: '0.83rem', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 6px 20px rgba(212,114,42,0.28)' }}>
-                    <Phone style={{ width: 14, height: 14 }} /> Enquire Now
-                  </motion.button>
-                  <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #F5C9A8', color: '#D4722A', padding: '11px 22px', borderRadius: 12, fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer' }}>
-                    View Sample Menu <ChevronRight style={{ width: 14, height: 14 }} />
-                  </motion.button>
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                {[{ icon: '🌸', text: 'Floral Arrangements' }, { icon: '👨‍🍳', text: 'Private Chef' }, { icon: '🥂', text: 'Wine Pairing' }, { icon: '🎵', text: 'Live Music' }].map((feat) => (
-                  <motion.div key={feat.text} whileHover={{ x: 4 }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1.5px solid #F5C9A8', borderRadius: 12, padding: '8px 14px', fontSize: '0.78rem', fontWeight: 600, color: '#78716C' }}>
-                    <span style={{ fontSize: '1rem' }}>{feat.icon}</span> {feat.text}
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 
