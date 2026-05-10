@@ -569,7 +569,7 @@ export default function FinancePage() {
                     <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
                       {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip formatter={(value: number | string) => formatCurrency(Number(value))} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0))} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-2.5 mt-2">
