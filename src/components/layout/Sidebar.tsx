@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Star, X } from 'lucide-react'
 import { navigation } from '@/lib/constants/navigation'
 import { cn } from '@/lib/utils/cn'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import BrandMark from '@/components/guest-portal/BrandMark'
 
 interface SidebarProps {
@@ -52,7 +52,7 @@ function NavContent({ open, onLinkClick }: { open: boolean; onLinkClick?: () => 
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative',
                       isActive
                         ? 'bg-azure-50 text-azure-700 shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >
                     {isActive && (
@@ -93,17 +93,21 @@ function NavContent({ open, onLinkClick }: { open: boolean; onLinkClick?: () => 
       <div className="p-3 border-t border-border/80">
         <div
           className={cn(
-            'rounded-xl p-3 gradient-azure text-white',
+            'rounded-xl p-3',
             open ? 'space-y-1' : 'flex items-center justify-center'
           )}
+          style={{
+            background: '#FDF8F2',
+            border: '1.5px solid #F3DCC0',
+          }}
         >
           {open ? (
             <>
-              <p className="text-xs font-semibold text-white/90">Grand Azure PMS</p>
-              <p className="text-xs text-white/60">v1.0.0 — Production</p>
+              <p className="text-xs font-semibold" style={{ color: '#944A15' }}>Grand Azure PMS</p>
+              <p className="text-xs" style={{ color: '#C4A882' }}>v1.0.0 — Production</p>
             </>
           ) : (
-            <Star className="w-4 h-4 fill-white" />
+            <Star className="w-4 h-4" style={{ fill: '#D4722A', color: '#D4722A' }} />
           )}
         </div>
       </div>
@@ -113,6 +117,19 @@ function NavContent({ open, onLinkClick }: { open: boolean; onLinkClick?: () => 
 
 export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const [hovered, setHovered] = useState(false)
+
+  /* Lock body scroll while mobile sidebar is open */
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
+  /* Close on Escape */
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onMobileClose() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onMobileClose])
 
   return (
     <>
@@ -136,40 +153,57 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       <AnimatePresence>
         {mobileOpen && (
           <>
-            {/* Backdrop */}
+            {/*
+              Backdrop — starts at top-14 (56px) so the topbar stays
+              fully visible and clickable above it.
+              z-20 keeps it below the topbar (z-30).
+            */}
             <motion.div
               key="backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
               onClick={onMobileClose}
+              className="lg:hidden fixed left-0 right-0 bottom-0 z-20"
+              style={{
+                top: 56,
+                background: 'rgba(15, 10, 5, 0.45)',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+              }}
             />
 
-            {/* Drawer */}
+            {/*
+              Drawer — slides in from the left, starts at top-14 (56px),
+              sits below the topbar with no duplicate header/logo/close row.
+              z-30 keeps it above the backdrop but below the topbar.
+            */}
             <motion.aside
               key="drawer"
-              initial={{ x: -300 }}
+              initial={{ x: -288 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="lg:hidden fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-[#fffaf3] via-[#fdf8f3] to-[#f7f1e8] border-r border-border flex flex-col z-50 shadow-premium-lg"
+              exit={{ x: -288 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="lg:hidden fixed left-0 bottom-0 flex flex-col z-30"
+              style={{
+                top: 56,
+                width: 272,
+                /* Premium warm-cream — matches your existing desktop sidebar palette */
+                background: 'linear-gradient(160deg, #fffaf3 0%, #fdf5e8 50%, #f7f1e8 100%)',
+                borderRight: '1px solid #f0dfc0',
+                boxShadow: '8px 0 40px rgba(120,60,10,0.10), 2px 0 8px rgba(120,60,10,0.06)',
+              }}
             >
-              {/* Mobile Logo + Close */}
-              <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <BrandMark />
-                </div>
-                <button
-                  onClick={onMobileClose}
-                  className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground/80 hover:text-foreground hover:bg-muted transition-all"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              {/* Amber accent rule — visual continuation of the topbar gradient line */}
+              <div
+                className="w-full flex-shrink-0"
+                style={{
+                  height: 2,
+                  background: 'linear-gradient(90deg, #e8a264, #c97c3a, #f5c07a, #e8a264)',
+                }}
+              />
 
-              {/* Reuse nav content — always "open" on mobile */}
               <NavContent open={true} onLinkClick={onMobileClose} />
             </motion.aside>
           </>

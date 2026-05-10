@@ -2,9 +2,8 @@
 
 import { motion } from 'framer-motion'
 import {
-  BedDouble, Wifi, Wind, Tv2, Bath, Coffee,
-  Users, ArrowUpRight, Building2, Layers,
-  CheckCircle2, Wrench, Sparkles, Lock, Star
+  BedDouble, ArrowUpRight, Building2, Layers,
+  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { formatCurrency } from '@/lib/utils/formatters'
@@ -24,22 +23,119 @@ const STATUS_CONFIG: Record<string, {
   dirty:     { label: 'Dirty',     bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500'   },
 }
 
-const FLOOR_COLORS = [
-  'from-azure-500 to-azure-600',
-  'from-violet-500 to-violet-600',
-  'from-emerald-500 to-emerald-600',
-  'from-amber-500 to-amber-600',
-  'from-rose-500 to-rose-600',
-  'from-cyan-500 to-cyan-600',
+/**
+ * 10 premium pastel radial-mesh gradients.
+ * Each is a unique two-stop blend with a directional highlight so every card
+ * feels hand-crafted rather than templated.
+ */
+const PASTEL_GRADIENTS = [
+  'bg-[radial-gradient(ellipse_at_top_left,_#fce7f3_0%,_#fdf2f8_60%,_#fff1f2_100%)]',   // rose-blush
+  'bg-[radial-gradient(ellipse_at_top_right,_#e0f2fe_0%,_#f0f9ff_60%,_#ecfeff_100%)]',  // sky-frost
+  'bg-[radial-gradient(ellipse_at_bottom_left,_#ede9fe_0%,_#f5f3ff_60%,_#faf5ff_100%)]',// lavender-mist
+  'bg-[radial-gradient(ellipse_at_top_left,_#d1fae5_0%,_#ecfdf5_60%,_#f0fdf4_100%)]',   // sage-dew
+  'bg-[radial-gradient(ellipse_at_bottom_right,_#ffedd5_0%,_#fff7ed_60%,_#fef9c3_100%)]',// peach-cream
+  'bg-[radial-gradient(ellipse_at_top,_#f3e8ff_0%,_#fdf4ff_60%,_#fce7f3_100%)]',        // lilac-cloud
+  'bg-[radial-gradient(ellipse_at_bottom_left,_#ccfbf1_0%,_#f0fdfa_60%,_#ecfeff_100%)]',// mint-haze
+  'bg-[radial-gradient(ellipse_at_top_right,_#fef3c7_0%,_#fffbeb_60%,_#fef9c3_100%)]',  // sand-glow
+  'bg-[radial-gradient(ellipse_at_center,_#fce7f3_0%,_#ede9fe_50%,_#e0f2fe_100%)]',     // blush-sky
+  'bg-[radial-gradient(ellipse_at_bottom,_#d1fae5_0%,_#ede9fe_60%,_#f5f3ff_100%)]',     // sage-lavender
 ]
 
+/** 5 decorative SVG patterns that tile inside the card banner */
+function CardPattern({ index }: { index: number }) {
+  const p = [
+    // concentric arcs — feels architectural
+    <svg key="arcs" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      {[24, 40, 56, 72, 88, 104].map((r, i) => (
+        <circle key={i} cx="0" cy="56" r={r}
+          stroke="currentColor" strokeWidth="1" strokeOpacity={0.18 - i * 0.025} fill="none" />
+      ))}
+    </svg>,
+    // fine diagonal hatch — linen texture
+    <svg key="hatch" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      {Array.from({ length: 22 }, (_, i) => (
+        <line key={i} x1={i * 8 - 20} y1="0" x2={i * 8 - 76} y2="56"
+          stroke="currentColor" strokeWidth="0.8" strokeOpacity="0.14" />
+      ))}
+    </svg>,
+    // dot grid — refined and airy
+    <svg key="dots" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      {Array.from({ length: 7 }, (_, row) =>
+        Array.from({ length: 15 }, (_, col) => (
+          <circle key={`${row}-${col}`} cx={col * 9 + 5} cy={row * 9 + 5} r="1.2"
+            fill="currentColor" fillOpacity="0.18" />
+        ))
+      )}
+    </svg>,
+    // flowing waves — spa / boutique vibe
+    <svg key="waves" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      {[0, 12, 24, 36, 48].map((offset, i) => (
+        <path key={i}
+          d={`M-10 ${30 + offset} Q20 ${18 + offset} 50 ${30 + offset} T110 ${30 + offset} T170 ${30 + offset}`}
+          stroke="currentColor" strokeWidth="1.2" strokeOpacity={0.15 - i * 0.02} fill="none" />
+      ))}
+    </svg>,
+    // hexagon lattice — luxury / geometric
+    <svg key="hex" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      {[[18,14],[46,14],[74,14],[102,14],[32,38],[60,38],[88,38],[116,38]].map(([cx, cy], i) => (
+        <polygon key={i}
+          points={`${cx},${cy-11} ${cx+9.5},${cy-5.5} ${cx+9.5},${cy+5.5} ${cx},${cy+11} ${cx-9.5},${cy+5.5} ${cx-9.5},${cy-5.5}`}
+          stroke="currentColor" strokeWidth="0.9" strokeOpacity="0.16" fill="none" />
+      ))}
+    </svg>,
+  ]
+  return p[index % p.length]
+}
+
+/** Stable hash of a string → integer */
+function strHash(s: string, max: number): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return h % max
+}
+
+/** Premium pastel banner shown at the top of each grid card */
+function CardBanner({ typeName, roomNumber }: { typeName: string; roomNumber: string }) {
+  const gi = strHash(typeName,   PASTEL_GRADIENTS.length)
+  const pi = strHash(roomNumber, 5)
+
+  return (
+    <div className={cn('relative h-[54px] overflow-hidden', PASTEL_GRADIENTS[gi])}>
+      <div className="absolute inset-0 text-slate-500/50">
+        <CardPattern index={pi} />
+      </div>
+      {/* Bottom fade so content below bleeds in naturally */}
+      <div className="absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-white/70 to-transparent" />
+    </div>
+  )
+}
+
+/** Small pastel swatch used in list-view rows */
+function RowSwatch({ typeName, roomNumber }: { typeName: string; roomNumber: string }) {
+  const gi = strHash(typeName,   PASTEL_GRADIENTS.length)
+  const pi = strHash(roomNumber, 5)
+
+  return (
+    <div className={cn(
+      'w-10 h-10 rounded-xl overflow-hidden shrink-0 relative border border-white shadow-sm',
+      PASTEL_GRADIENTS[gi]
+    )}>
+      <div className="absolute inset-0 text-slate-400/50 scale-[2.4] origin-bottom-left">
+        <CardPattern index={pi} />
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────── RoomCard ─────────────────────────── */
+
 function RoomCard({ room, onClick }: { room: any; onClick: () => void }) {
-  const cfg        = STATUS_CONFIG[room.status] ?? STATUS_CONFIG.available
-  const rt         = room.room_types as any
-  const hotel      = room.hotels    as any
-  const price      = rt?.base_price     ?? 0
-  const floor      = room.floor_number  ?? 1
-  const floorColor = FLOOR_COLORS[(floor - 1) % FLOOR_COLORS.length]
+  const cfg      = STATUS_CONFIG[room.status] ?? STATUS_CONFIG.available
+  const rt       = room.room_types as any
+  const hotel    = room.hotels    as any
+  const price    = rt?.base_price    ?? 0
+  const floor    = room.floor_number ?? 1
+  const typeName = rt?.type_name     ?? 'Standard Room'
 
   return (
     <motion.div
@@ -52,22 +148,16 @@ function RoomCard({ room, onClick }: { room: any; onClick: () => void }) {
       onClick={onClick}
       className="bg-white rounded-2xl border border-slate-100 shadow-card cursor-pointer overflow-hidden group"
     >
-      <div className={cn('h-1.5 bg-gradient-to-r', floorColor)} />
+      <CardBanner typeName={typeName} roomNumber={room.room_number} />
+
       <div className="p-4">
         {/* Room number + status */}
         <div className="flex items-start justify-between mb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-slate-900 font-display">
-                {room.room_number}
-              </span>
-              {rt?.type_category === 'suite' && (
-                <Star className="w-3.5 h-3.5 text-gold-500 fill-gold-400" />
-              )}
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-              {rt?.type_name ?? 'Standard Room'}
-            </p>
+            <span className="text-xl font-bold text-slate-900 font-display leading-none">
+              {room.room_number}
+            </span>
+            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{typeName}</p>
           </div>
           <div className={cn(
             'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border',
@@ -78,23 +168,20 @@ function RoomCard({ room, onClick }: { room: any; onClick: () => void }) {
           </div>
         </div>
 
-        {/* Hotel + floor + occupancy */}
+        {/* Meta */}
         <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
           <span className="flex items-center gap-1">
-            <Building2 className="w-3 h-3" />
-            {hotel?.city ?? '—'}
+            <Building2 className="w-3 h-3" />{hotel?.city ?? '—'}
           </span>
           <span className="flex items-center gap-1">
-            <Layers className="w-3 h-3" />
-            Floor {floor}
+            <Layers className="w-3 h-3" />Floor {floor}
           </span>
           <span className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            {rt?.max_occupancy ?? 2}
+            <Users className="w-3 h-3" />{rt?.max_occupancy ?? 2}
           </span>
         </div>
 
-        {/* Bed type + view */}
+        {/* Tags */}
         <div className="flex flex-wrap gap-1.5 mb-3">
           {rt?.bed_type && (
             <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 rounded-full text-xs text-slate-500 capitalize">
@@ -113,7 +200,7 @@ function RoomCard({ room, onClick }: { room: any; onClick: () => void }) {
           )}
         </div>
 
-        {/* Price + arrow */}
+        {/* Price */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-50">
           <div>
             <p className="text-xs text-slate-400">Base rate / night</p>
@@ -128,11 +215,14 @@ function RoomCard({ room, onClick }: { room: any; onClick: () => void }) {
   )
 }
 
+/* ─────────────────────────── RoomRow ─────────────────────────── */
+
 function RoomRow({ room, onClick }: { room: any; onClick: () => void }) {
-  const cfg   = STATUS_CONFIG[room.status] ?? STATUS_CONFIG.available
-  const rt    = room.room_types as any
-  const hotel = room.hotels    as any
-  const price = rt?.base_price ?? 0
+  const cfg      = STATUS_CONFIG[room.status] ?? STATUS_CONFIG.available
+  const rt       = room.room_types as any
+  const hotel    = room.hotels    as any
+  const price    = rt?.base_price ?? 0
+  const typeName = rt?.type_name  ?? 'Standard Room'
 
   return (
     <motion.div
@@ -144,13 +234,12 @@ function RoomRow({ room, onClick }: { room: any; onClick: () => void }) {
       onClick={onClick}
       className="bg-white border border-slate-100 rounded-xl px-5 py-3.5 flex items-center gap-4 cursor-pointer hover:shadow-card-hover hover:border-azure-200 transition-all group"
     >
-      <div className="w-10 h-10 rounded-xl gradient-azure flex items-center justify-center shrink-0">
-        <BedDouble className="w-4 h-4 text-white" />
-      </div>
+      <RowSwatch typeName={typeName} roomNumber={room.room_number} />
+
       <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div>
           <p className="font-bold text-slate-900">{room.room_number}</p>
-          <p className="text-xs text-slate-500 truncate">{rt?.type_name ?? '—'}</p>
+          <p className="text-xs text-slate-500 truncate">{typeName}</p>
         </div>
         <div className="hidden sm:block">
           <p className="text-xs text-slate-400">Hotel</p>
@@ -167,6 +256,7 @@ function RoomRow({ room, onClick }: { room: any; onClick: () => void }) {
           <p className="text-sm font-semibold text-slate-900">{formatCurrency(price)}</p>
         </div>
       </div>
+
       <div className={cn(
         'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0',
         cfg.bg, cfg.text, cfg.border
@@ -179,10 +269,12 @@ function RoomRow({ room, onClick }: { room: any; onClick: () => void }) {
   )
 }
 
+/* ────────────────────────── Skeleton ──────────────────────────── */
+
 function SkeletonCard() {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden animate-pulse">
-      <div className="h-1.5 bg-slate-200" />
+      <div className="h-[54px] bg-gradient-to-br from-slate-100 to-slate-50" />
       <div className="p-4 space-y-3">
         <div className="flex justify-between">
           <div className="space-y-1.5">
@@ -207,6 +299,8 @@ function SkeletonCard() {
     </div>
   )
 }
+
+/* ─────────────────────────── Export ───────────────────────────── */
 
 export function RoomsGrid({ rooms, loading, view, onSelectRoom }: Props) {
   if (loading) {
@@ -238,7 +332,6 @@ export function RoomsGrid({ rooms, loading, view, onSelectRoom }: Props) {
     )
   }
 
-  // Group by hotel name for grid view
   const byHotel: Record<string, any[]> = {}
   rooms.forEach(r => {
     const name = (r.hotels as any)?.hotel_name ?? 'Unknown Hotel'

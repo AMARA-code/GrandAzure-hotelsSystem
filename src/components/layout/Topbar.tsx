@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Bell, ChevronDown, LogOut, User, Settings, Loader2 } from 'lucide-react'
+import { Menu, Bell, ChevronDown, LogOut, User, Loader2, ArrowLeft, Mail, Shield, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -27,15 +27,87 @@ interface TickerItem {
   accent: string
 }
 
+interface CurrentUser {
+  firstName: string
+  lastName: string
+  fullName: string
+  email: string
+  roleName: string
+  initials: string
+}
+
+type DropdownView = 'main' | 'profile'
+
+function cap(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''
+}
+function initials(first: string, last: string) {
+  return (cap(first).charAt(0) + cap(last).charAt(0)).toUpperCase()
+}
+
 export default function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter()
 
   const [userDropdown, setUserDropdown] = useState(false)
+  const [dropdownView, setDropdownView] = useState<DropdownView>('main')
   const [notifOpen, setNotifOpen]       = useState(false)
   const [stats, setStats]               = useState<LiveStats | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
-  const userDropdownRef = useRef<HTMLDivElement>(null)
+  const [currentUser, setCurrentUser]   = useState<CurrentUser | null>(null)
+
+  const userDropdownRef  = useRef<HTMLDivElement>(null)
   const notifDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user }, error: authErr } = await supabase.auth.getUser()
+        if (authErr || !user?.email) return
+
+        const { data, error } = await supabase
+          .from('staff')
+          .select('first_name, last_name, email, staff_roles ( role_name )')
+          .eq('email', user.email)
+          .eq('is_deleted', false)
+          .eq('is_active', true)
+          .single()
+
+        if (error || !data) {
+          const meta      = user.user_metadata ?? {}
+          const full      = meta.full_name
+            ?? [meta.first_name, meta.last_name].filter(Boolean).join(' ')
+            ?? user.email.split('@')[0]
+            ?? 'User'
+          const [f = '', ...rest] = full.split(' ')
+          const l = rest.join(' ')
+          setCurrentUser({
+            firstName: cap(f), lastName: cap(l),
+            fullName: full.trim(), email: user.email,
+            roleName: 'Staff', initials: initials(f, l || f),
+          })
+          return
+        }
+
+        const first   = data.first_name ?? ''
+        const last    = data.last_name  ?? ''
+        const roleRow = Array.isArray(data.staff_roles)
+          ? data.staff_roles[0]
+          : (data.staff_roles as any)
+        const roleName = roleRow?.role_name ?? 'Staff'
+
+        setCurrentUser({
+          firstName: cap(first), lastName: cap(last),
+          fullName: `${cap(first)} ${cap(last)}`.trim(),
+          email: data.email, roleName,
+          initials: initials(first, last),
+        })
+      } catch {
+        // silently keep null
+      }
+    }
+    fetchUser()
+  }, [])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -47,17 +119,12 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
           await Promise.all([
             supabase.from('bookings').select('booking_id', { count: 'exact', head: true })
               .eq('check_in_date', today).eq('booking_status', 'confirmed'),
-
             supabase.from('bookings').select('booking_id', { count: 'exact', head: true })
               .eq('check_out_date', today).eq('booking_status', 'checked_in'),
-
             supabase.from('rooms').select('room_id, status').eq('is_deleted', false),
-
             supabase.from('housekeeping_schedules').select('schedule_id', { count: 'exact', head: true })
               .eq('status', 'scheduled'),
-
             supabase.from('invoices').select('total_amount').eq('status', 'paid'),
-
             supabase.from('bookings').select('booking_id', { count: 'exact', head: true })
               .eq('booking_status', 'confirmed').eq('is_deleted', false),
           ])
@@ -71,14 +138,13 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         setStats({
           arrivalsToday:       arrivalsRes.count   ?? 0,
           departuresToday:     departuresRes.count ?? 0,
-          occupiedRooms,
-          totalRooms,
-          pendingHousekeeping: hkRes.count          ?? 0,
+          occupiedRooms, totalRooms,
+          pendingHousekeeping: hkRes.count         ?? 0,
           revenue,
-          confirmedBookings:   confirmedRes.count   ?? 0,
+          confirmedBookings:   confirmedRes.count  ?? 0,
         })
       } catch {
-        // keep previous
+        // keep previous stats
       } finally {
         setLoadingStats(false)
       }
@@ -91,8 +157,10 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node))
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
         setUserDropdown(false)
+        setDropdownView('main')
+      }
       if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target as Node))
         setNotifOpen(false)
     }
@@ -108,15 +176,25 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     router.refresh()
   }
 
+  const closeUserDropdown = () => {
+    setUserDropdown(false)
+    setDropdownView('main')
+  }
+
+  const displayName     = currentUser?.fullName  ?? '—'
+  const displayEmail    = currentUser?.email     ?? '—'
+  const displayRole     = currentUser?.roleName  ?? '—'
+  const displayInitials = currentUser?.initials  ?? '?'
+
   const occupancyPct = stats
     ? Math.round((stats.occupiedRooms / stats.totalRooms) * 100)
     : 0
 
   const notificationItems = stats ? [
-    { label: 'Arrivals Today', value: String(stats.arrivalsToday), route: '/bookings' },
+    { label: 'Arrivals Today',       value: String(stats.arrivalsToday),      route: '/bookings'     },
     { label: 'Pending Housekeeping', value: String(stats.pendingHousekeeping), route: '/housekeeping' },
-    { label: 'Open Maintenance', value: String(stats.pendingHousekeeping), route: '/maintenance' },
-    { label: 'Confirmed Bookings', value: String(stats.confirmedBookings), route: '/bookings' },
+    { label: 'Open Maintenance',     value: String(stats.pendingHousekeeping), route: '/maintenance'  },
+    { label: 'Confirmed Bookings',   value: String(stats.confirmedBookings),   route: '/bookings'     },
   ] : []
 
   const tickerItems: TickerItem[] = stats ? [
@@ -132,9 +210,8 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const loopItems = [...tickerItems, ...tickerItems, ...tickerItems]
 
   return (
-    <header className="h-14 bg-card border-b border-border sticky top-0 z-30">
+    <header className="h-14 bg-white dark:bg-card border-b border-border sticky top-0 z-30">
 
-      {/* Animated rainbow bottom line */}
       <motion.div
         className="absolute bottom-0 left-0 right-0 h-[2px] pointer-events-none z-20"
         style={{
@@ -145,10 +222,9 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
       />
 
-      {/* Main row */}
       <div className="flex items-center h-full gap-1 px-4">
 
-        {/* ── LEFT: hamburger (mobile only) ── */}
+        {/* ── LEFT: hamburger ── */}
         <div className="flex items-center flex-shrink-0">
           <button
             onClick={onMenuClick}
@@ -158,22 +234,16 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
           </button>
         </div>
 
-        {/* ── CENTER: ticker pill ── */}
+        {/* ── CENTER: ticker pill (desktop) ── */}
         <div className="hidden md:flex flex-1 justify-center min-w-0">
           <div
             className="relative flex items-center h-8 rounded-full border border-border bg-muted overflow-hidden"
             style={{ width: '820px', maxWidth: '100%' }}
           >
-            {/* Left fade */}
-            <div
-              className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none rounded-l-full"
-              style={{ background: 'linear-gradient(to right, #fdfaf6, transparent)' }}
-            />
-            {/* Right fade */}
-            <div
-              className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none rounded-r-full"
-              style={{ background: 'linear-gradient(to left, #fdfaf6, transparent)' }}
-            />
+            <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none rounded-l-full"
+              style={{ background: 'linear-gradient(to right, hsl(var(--muted)), transparent)' }} />
+            <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none rounded-r-full"
+              style={{ background: 'linear-gradient(to left, hsl(var(--muted)), transparent)' }} />
 
             {loadingStats ? (
               <div className="flex items-center gap-2 px-4">
@@ -205,9 +275,12 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
           </div>
         </div>
 
+        {/* ── CENTER: mobile compact ── */}
         <div className="md:hidden flex-1 min-w-0">
           <div className="mx-2 rounded-full border border-border bg-muted px-3 py-1.5 text-[11px] font-semibold text-muted-foreground truncate">
-            {loadingStats ? 'Loading operations...' : `Occupancy ${occupancyPct}% · Bookings ${stats?.confirmedBookings ?? 0}`}
+            {loadingStats
+              ? 'Loading operations...'
+              : `Occupancy ${occupancyPct}% · Bookings ${stats?.confirmedBookings ?? 0}`}
           </div>
         </div>
 
@@ -217,7 +290,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
           {/* Bell */}
           <div ref={notifDropdownRef} className="relative">
             <button
-              onClick={() => setNotifOpen((prev) => !prev)}
+              onClick={() => setNotifOpen((p) => !p)}
               className="relative w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:bg-muted transition-all"
             >
               <Bell className="w-3.5 h-3.5" />
@@ -231,7 +304,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 6, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full right-0 mt-2 w-64 bg-card rounded-xl border border-border shadow-premium-lg overflow-hidden z-50"
+                  className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-card rounded-xl border border-border shadow-lg overflow-hidden z-50"
                 >
                   <div className="p-3 border-b border-border/80">
                     <p className="text-sm font-semibold text-foreground">Notifications</p>
@@ -240,39 +313,45 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   <div className="p-1.5 space-y-0.5">
                     {notificationItems.length === 0 ? (
                       <p className="px-3 py-2 text-xs text-muted-foreground">No updates yet.</p>
-                    ) : (
-                      notificationItems.map((item) => (
-                        <button
-                          key={item.label}
-                          onClick={() => {
-                            setNotifOpen(false)
-                            router.push(item.route)
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
-                        >
-                          <span>{item.label}</span>
-                          <span className="font-semibold text-foreground">{item.value}</span>
-                        </button>
-                      ))
-                    )}
+                    ) : notificationItems.map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => { setNotifOpen(false); router.push(item.route) }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        <span>{item.label}</span>
+                        <span className="font-semibold text-foreground">{item.value}</span>
+                      </button>
+                    ))}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* User dropdown */}
+          {/* User button */}
           <div ref={userDropdownRef} className="relative">
             <button
-              onClick={() => setUserDropdown(!userDropdown)}
-              className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-lg border border-[#e9dac9] bg-gradient-to-r from-[#fff9f2] to-[#fdf4ea] hover:bg-muted transition-all"
+              onClick={() => { setUserDropdown(!userDropdown); setDropdownView('main') }}
+              className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-lg border border-[#e9dac9] bg-gradient-to-r from-[#fff9f2] to-[#fdf4ea] hover:opacity-90 transition-all"
             >
-              <div className="w-6 h-6 rounded-md gradient-azure flex items-center justify-center flex-shrink-0">
-                <User className="w-3 h-3 text-white" />
+              {/* ── Small avatar — pastel cream ── */}
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
+                style={{ background: '#FDF8F2', border: '1.5px solid #F3DCC0' }}
+              >
+                {currentUser
+                  ? <span className="text-[10px] font-bold leading-none" style={{ color: '#944A15' }}>{displayInitials}</span>
+                  : <User className="w-3 h-3" style={{ color: '#944A15' }} />
+                }
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-[11px] font-semibold text-foreground leading-tight">Admin</p>
-                <p className="text-[10px] text-muted-foreground/80 leading-tight">General Manager</p>
+                <p className="text-[11px] font-semibold text-foreground leading-tight truncate max-w-[88px]">
+                  {currentUser?.firstName ?? '—'}
+                </p>
+                <p className="text-[10px] text-muted-foreground/80 leading-tight truncate max-w-[88px]">
+                  {displayRole}
+                </p>
               </div>
               <ChevronDown className="w-3 h-3 text-muted-foreground/80" />
             </button>
@@ -284,71 +363,119 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 6, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full right-0 mt-2 w-48 bg-card rounded-xl border border-border shadow-premium-lg overflow-hidden z-50"
+                  className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-card rounded-xl border border-border shadow-lg overflow-hidden z-50"
                 >
-                  <div className="p-3 border-b border-border/80">
-                    <p className="text-sm font-semibold text-foreground">Admin User</p>
-                    <p className="text-xs text-muted-foreground/80">admin@grandazure.com</p>
-                  </div>
-                  <div className="m-1.5 rounded-lg border border-[#ecd8c4] bg-[#fff6ed] p-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b5a3c]">Current Account</p>
-                    <p className="mt-1 text-xs text-foreground">admin@grandazure.com</p>
-                    <div className="mt-2 grid grid-cols-2 gap-1.5">
-                      <button
-                        onClick={() => {
-                          setUserDropdown(false)
-                          router.push('/login')
-                        }}
-                        className="rounded-md border border-[#e8c8a8] bg-[#fff0e2] px-2 py-1.5 text-[11px] font-semibold text-[#b85c1f] hover:bg-[#ffe6d0] transition-colors"
-                      >
-                        Switch: Sign In
-                      </button>
-                      <button
-                        onClick={() => {
-                          setUserDropdown(false)
-                          router.push('/signup')
-                        }}
-                        className="rounded-md border border-[#d7e4ff] bg-[#edf3ff] px-2 py-1.5 text-[11px] font-semibold text-[#2b66c4] hover:bg-[#dfeaff] transition-colors"
-                      >
-                        New: Sign Up
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-1.5 space-y-0.5">
-                    <button
-                      onClick={() => {
-                        setUserDropdown(false)
-                        router.push('/my-account')
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
-                    >
-                      <User className="w-4 h-4 text-muted-foreground/80" />
-                      My Profile
-                    </button>
-                    <button
-                      onClick={() => {
-                        setUserDropdown(false)
-                        router.push('/staff')
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
-                    >
-                      <Settings className="w-4 h-4 text-muted-foreground/80" />
-                      Settings
-                    </button>
-                    <div className="border-t border-border/80 mt-1 pt-1">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-rose-600 hover:bg-rose-50 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
+
+                  {/* ══ MAIN VIEW ══ */}
+                  {dropdownView === 'main' && (
+                    <>
+                      <div className="p-3 border-b border-border/80">
+                        <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                        <p className="text-xs text-muted-foreground/80 truncate">{displayEmail}</p>
+                      </div>
+
+                      <div className="p-1.5 space-y-0.5">
+                        <button
+                          onClick={() => setDropdownView('profile')}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                          <User className="w-4 h-4 text-muted-foreground/80 flex-shrink-0" />
+                          My Profile
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            closeUserDropdown()
+                            const supabase = createClient()
+                            await supabase.auth.signOut()
+                            router.push('/login')
+                            router.refresh()
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4 text-muted-foreground/80 flex-shrink-0" />
+                          Switch Account
+                        </button>
+
+                        <div className="border-t border-border/80 mt-1 pt-1">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4 flex-shrink-0" />
+                            Sign Out
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ══ PROFILE VIEW ══ */}
+                  {dropdownView === 'profile' && (
+                    <>
+                      <div className="flex items-center gap-2 p-3 border-b border-border/80">
+                        <button
+                          onClick={() => setDropdownView('main')}
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors flex-shrink-0"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <p className="text-sm font-semibold text-foreground">My Profile</p>
+                      </div>
+
+                      <div className="p-3 space-y-3">
+                        {/* ── Large avatar — pastel cream ── */}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: '#FDF8F2',
+                              border: '1.5px solid #F3DCC0',
+                              boxShadow: '0 2px 8px rgba(212,114,42,0.1)',
+                            }}
+                          >
+                            <span className="text-sm font-bold leading-none" style={{ color: '#944A15' }}>
+                              {displayInitials}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground leading-tight truncate">{displayName}</p>
+                            <p className="text-[11px] text-muted-foreground leading-tight">{displayRole}</p>
+                          </div>
+                        </div>
+
+                        {/* Info card */}
+                        <div className="rounded-lg border border-border/80 bg-muted/40 divide-y divide-border/60 overflow-hidden">
+                          <div className="flex items-start gap-2.5 px-3 py-2">
+                            <Mail className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide font-medium">Email</p>
+                              <p className="text-xs font-medium text-foreground break-all">{displayEmail}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2.5 px-3 py-2">
+                            <Shield className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide font-medium">Role</p>
+                              <p className="text-xs font-medium text-foreground">{displayRole}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Active session */}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
+                          <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">Active session</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+
         </div>
       </div>
     </header>

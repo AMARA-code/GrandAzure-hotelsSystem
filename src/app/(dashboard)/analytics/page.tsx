@@ -11,7 +11,7 @@ import {
 import {
   TrendingUp, Users, Star, DollarSign, BarChart2, Activity,
   Award, Filter, Download, RefreshCw, Bed, Calendar,
-  ArrowUpRight, ArrowDownRight, Sparkles, Globe, Target,
+  ArrowUpRight, ArrowDownRight, Globe, Target,
   X, Check, CheckCircle2
 } from 'lucide-react'
 
@@ -133,7 +133,7 @@ const shortHotelName = (name: string) =>
 
 // ─── CSV Export ───────────────────────────────────────────────────────────────
 function downloadCSV(type: string, filteredRevenue: RevenueSummary[], filteredBookings: BookingStat[]) {
-  let csv = '\uFEFF' // BOM for Excel
+  let csv = '\uFEFF'
   let filename = ''
 
   if (type === 'revenue' || type === 'all') {
@@ -195,6 +195,99 @@ function downloadCSV(type: string, filteredRevenue: RevenueSummary[], filteredBo
   const a    = document.createElement('a')
   a.href = url; a.download = filename; a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// ─── Analytics Avatar (Terracotta Gold — no purple) ───────────────────────────
+function AnalyticsAvatar({ size = 40 }: { size?: number }) {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className="rounded-xl overflow-hidden flex-shrink-0 border border-amber-200 bg-amber-50 shadow-sm"
+    >
+      <svg
+        viewBox="0 0 100 100"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ width: '100%', height: '100%' }}
+      >
+        {/* Background warm circle */}
+        <circle cx="50" cy="50" r="50" fill="#FAEEDA" />
+
+        {/* ── Desk / base ── */}
+        <rect x="10" y="78" width="80" height="5" rx="2" fill="#BA7517" />
+        <rect x="15" y="72" width="70" height="8" rx="2" fill="#EF9F27" />
+
+        {/* ── Chart board ── */}
+        <rect x="12" y="36" width="50" height="38" rx="3" fill="#fff" stroke="#EF9F27" strokeWidth="1.2" />
+        {/* Chart bars */}
+        <rect x="19" y="60" width="6" height="12" rx="1" fill="#D85A30" />
+        <rect x="27" y="54" width="6" height="18" rx="1" fill="#BA7517" />
+        <rect x="35" y="47" width="6" height="25" rx="1" fill="#EF9F27" />
+        <rect x="43" y="51" width="6" height="21" rx="1" fill="#D85A30" />
+        <rect x="51" y="44" width="6" height="28" rx="1" fill="#BA7517" />
+        {/* Baseline */}
+        <line x1="16" y1="73" x2="62" y2="73" stroke="#EF9F27" strokeWidth="0.8" />
+        {/* Tiny legend dots */}
+        <circle cx="20" cy="42" r="2.5" fill="#D85A30" />
+        <circle cx="26" cy="42" r="2.5" fill="#BA7517" />
+        <circle cx="32" cy="42" r="2.5" fill="#EF9F27" />
+
+        {/* ── Body / torso ── */}
+        <path d="M36 72 Q36 63 43 61 L57 61 Q64 63 64 72 L64 76 L36 76 Z" fill="#633806" />
+        {/* Collar detail */}
+        <path d="M47 61 L50 68 L53 61" fill="#854F0B" />
+
+        {/* ── Left arm (resting on desk) ── */}
+        <path d="M36 69 Q26 72 20 76 L26 77 Q32 74 40 71 Z" fill="#633806" />
+
+        {/* ── Right arm (raised, holding magnifier) ── */}
+        <path d="M64 65 Q74 57 80 47 L76 44 Q71 54 61 63 Z" fill="#633806" />
+
+        {/* ── Head ── */}
+        <circle cx="50" cy="54" r="13" fill="#FAC775" />
+        {/* Hair */}
+        <path d="M37 50 Q38 40 50 38 Q62 40 63 50 Q59 44 50 43 Q41 44 37 50 Z" fill="#412402" />
+        {/* Ears */}
+        <ellipse cx="37" cy="54" rx="3" ry="4" fill="#FAC775" />
+        <ellipse cx="63" cy="54" rx="3" ry="4" fill="#FAC775" />
+        {/* Eyes */}
+        <circle cx="45" cy="52" r="2" fill="#412402" />
+        <circle cx="55" cy="52" r="2" fill="#412402" />
+        {/* Eye shine */}
+        <circle cx="46" cy="51" r="0.8" fill="#fff" />
+        <circle cx="56" cy="51" r="0.8" fill="#fff" />
+        {/* Nose */}
+        <path d="M49 56 Q50 58 51 56" fill="none" stroke="#D85A30" strokeWidth="0.8" strokeLinecap="round" />
+        {/* Smile */}
+        <path d="M45 60 Q50 64 55 60" fill="none" stroke="#D85A30" strokeWidth="1.2" strokeLinecap="round" />
+
+        {/* ── Magnifying glass ── */}
+        {/* Handle */}
+        <line x1="82" y1="44" x2="92" y2="34" stroke="#412402" strokeWidth="3.5" strokeLinecap="round" />
+        {/* Outer ring */}
+        <circle cx="74" cy="51" r="12" fill="none" stroke="#D85A30" strokeWidth="3" />
+        {/* Lens */}
+        <circle cx="74" cy="51" r="9" fill="#FAEEDA" fillOpacity="0.75" />
+        {/* Mini bars inside lens */}
+        <rect x="69" y="54" width="3" height="6" rx="0.5" fill="#D85A30" fillOpacity="0.85" />
+        <rect x="73" y="51" width="3" height="9" rx="0.5" fill="#BA7517" fillOpacity="0.85" />
+        <rect x="77" y="48" width="3" height="12" rx="0.5" fill="#EF9F27" fillOpacity="0.85" />
+
+        {/* ── Sparkle accents ── */}
+        <path d="M8 28 L9.5 32 L11 28 L9.5 24 Z" fill="#EF9F27" />
+        <path d="M5 28 L9.5 29.5 L14 28 L9.5 26.5 Z" fill="#EF9F27" />
+        <path d="M88 22 L89.5 26 L91 22 L89.5 18 Z" fill="#D85A30" />
+        <path d="M85 22 L89.5 23.5 L94 22 L89.5 20.5 Z" fill="#D85A30" />
+        <path d="M18 16 L19 19 L20 16 L19 13 Z" fill="#BA7517" />
+        <path d="M16 16 L19 17 L22 16 L19 15 Z" fill="#BA7517" />
+
+        {/* ── Floating data dots ── */}
+        <circle cx="10" cy="55" r="3" fill="#EF9F27" fillOpacity="0.45" />
+        <circle cx="15" cy="63" r="2" fill="#D85A30" fillOpacity="0.4" />
+        <circle cx="88" cy="62" r="3" fill="#EF9F27" fillOpacity="0.45" />
+        <circle cx="83" cy="70" r="2" fill="#D85A30" fillOpacity="0.4" />
+      </svg>
+    </div>
+  )
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -296,7 +389,6 @@ function FilterDrawer({ open, onClose, selHotels, setSelHotels, selMonths, setSe
             transition={{type:'spring', stiffness:300, damping:30}}
             className="fixed top-0 right-0 h-full w-80 max-w-[92vw] z-50 bg-white shadow-premium-xl flex flex-col"
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl gradient-azure flex items-center justify-center shadow-azure">
@@ -314,7 +406,6 @@ function FilterDrawer({ open, onClose, selHotels, setSelHotels, selMonths, setSe
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-7">
-              {/* Properties */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Properties</p>
@@ -343,7 +434,6 @@ function FilterDrawer({ open, onClose, selHotels, setSelHotels, selMonths, setSe
                 </div>
               </div>
 
-              {/* Months */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Months</p>
@@ -365,7 +455,6 @@ function FilterDrawer({ open, onClose, selHotels, setSelHotels, selMonths, setSe
                 </div>
               </div>
 
-              {/* Summary badge */}
               <div className={`p-3.5 rounded-xl border transition-all ${
                 selHotels.length===HOTELS.length && selMonths.length===MONTHS.length
                   ? 'bg-slate-50 border-slate-100' : 'bg-amber-50 border-amber-100'
@@ -379,7 +468,6 @@ function FilterDrawer({ open, onClose, selHotels, setSelHotels, selMonths, setSe
               </div>
             </div>
 
-            {/* Footer */}
             <div className="p-5 border-t border-slate-100 flex gap-2.5">
               <button onClick={()=>{setSelHotels([...HOTELS]);setSelMonths([...MONTHS])}}
                 className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
@@ -570,13 +658,12 @@ export default function AnalyticsPage() {
       <motion.div key={refreshKey} initial={{opacity:0,y:-16}} animate={{opacity:1,y:0}} transition={{duration:0.45}} className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-xl gradient-premium flex items-center justify-center shadow-azure">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+            <div className="flex items-center gap-2.5 mb-1">
+              {/* ── Terracotta Gold Analytics Avatar ── */}
+              <AnalyticsAvatar size={40} />
               <h1 className="text-xl sm:text-2xl font-bold font-display text-gradient-azure">Analytics & Reports</h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-400 ml-10">
+            <p className="text-xs sm:text-sm text-slate-400 ml-[52px]">
               {appliedHotels.length} propert{appliedHotels.length===1?'y':'ies'} · {appliedMonths.length} month{appliedMonths.length===1?'':'s'} · Jan–May 2026
             </p>
           </div>
@@ -971,7 +1058,7 @@ export default function AnalyticsPage() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-premium border border-slate-100 p-4 sm:p-5">
-                <SectionHeader title="Lifetime Points by Tier" sub="Total accumulated loyalty points" icon={<Sparkles className="w-3.5 h-3.5 text-white"/>}/>
+                <SectionHeader title="Lifetime Points by Tier" sub="Total accumulated loyalty points" icon={<Award className="w-3.5 h-3.5 text-white"/>}/>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={LOYALTY_STATS.map(l=>({tier:l.tier_name,points:l.total_lifetime_points}))} margin={{top:4,right:8,left:0,bottom:0}}>

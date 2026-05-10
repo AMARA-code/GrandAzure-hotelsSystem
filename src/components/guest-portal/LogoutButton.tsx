@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-export default function LogoutButton() {
+export default function LogoutButton({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -25,7 +25,8 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       disabled={loading}
-      style={{
+      className={className}
+      style={className ? undefined : {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '6px',
@@ -43,11 +44,11 @@ export default function LogoutButton() {
         transition: 'background 0.2s, color 0.2s',
         whiteSpace: 'nowrap',
       }}
-      onMouseEnter={e => {
+      onMouseEnter={className ? undefined : e => {
         (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)'
         ;(e.currentTarget as HTMLButtonElement).style.color = '#fff'
       }}
-      onMouseLeave={e => {
+      onMouseLeave={className ? undefined : e => {
         (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)'
         ;(e.currentTarget as HTMLButtonElement).style.color = '#D6D3D1'
       }}

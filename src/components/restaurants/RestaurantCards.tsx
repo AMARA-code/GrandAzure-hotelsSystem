@@ -19,37 +19,32 @@ function formatTime(t: string | null) {
   return `${h12}:${m} ${ampm}`
 }
 
-const cuisineConfig: Record<string, {
-  bg: string; text: string; border: string;
-  headerClass: string; emoji: string
-}> = {
-  International: {
-    bg: 'bg-azure-50', text: 'text-azure-700', border: 'border-azure-200',
-    headerClass: 'bg-gradient-to-br from-azure-800 to-azure-600',
-    emoji: '🌍'
-  },
-  Pakistani: {
-    bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200',
-    headerClass: 'bg-gradient-to-br from-amber-900 to-amber-700',
-    emoji: '🍛'
-  },
-  Continental: {
-    bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200',
-    headerClass: 'bg-gradient-to-br from-slate-800 to-emerald-800',
-    emoji: '🥩'
-  },
-  default: {
-    bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200',
-    headerClass: 'bg-gradient-to-br from-slate-800 to-slate-600',
-    emoji: '🍽️'
-  },
+// Pastel palette — mirrors HomeLanding PASTEL_CARDS exactly
+const PASTEL_CARDS = [
+  { bg: '#FFF4ED', border: '#F5C9A8', accent: '#D4722A', tag: '#FDE8D4', iconBg: '#FDE8D4' }, // terracotta
+  { bg: '#EFF6FF', border: '#BFDBFE', accent: '#2563EB', tag: '#DBEAFE', iconBg: '#DBEAFE' }, // blue
+  { bg: '#F0FDF4', border: '#BBF7D0', accent: '#16A34A', tag: '#DCFCE7', iconBg: '#DCFCE7' }, // green
+  { bg: '#FDF4FF', border: '#E9D5FF', accent: '#9333EA', tag: '#F3E8FF', iconBg: '#F3E8FF' }, // purple
+  { bg: '#FFF7ED', border: '#FED7AA', accent: '#EA580C', tag: '#FFEDD5', iconBg: '#FFEDD5' }, // orange
+  { bg: '#F0F9FF', border: '#BAE6FD', accent: '#0284C7', tag: '#E0F2FE', iconBg: '#E0F2FE' }, // sky
+]
+
+const cuisineEmoji: Record<string, string> = {
+  International: '🌍',
+  Pakistani:     '🍛',
+  Continental:   '🥩',
+  Chinese:       '🥢',
+  Italian:       '🍝',
+  Arabic:        '🧆',
+  default:       '🍽️',
 }
 
 export default function RestaurantCards({ restaurants }: { restaurants: RestaurantWithStats[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
       {restaurants.map((r, i) => {
-        const cfg = cuisineConfig[r.cuisine_type ?? ''] ?? cuisineConfig.default
+        const p = PASTEL_CARDS[i % PASTEL_CARDS.length]
+        const emoji = cuisineEmoji[r.cuisine_type ?? ''] ?? cuisineEmoji.default
 
         return (
           <motion.div
@@ -57,97 +52,167 @@ export default function RestaurantCards({ restaurants }: { restaurants: Restaura
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: i * 0.09, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            whileHover={{ y: -6, transition: { duration: 0.25 } }}
-            className="bg-white rounded-2xl border border-slate-100 shadow-premium hover:shadow-premium-lg transition-all duration-300 overflow-hidden group cursor-default"
+            whileHover={{ y: -6, boxShadow: `0 20px 48px ${p.accent}22`, transition: { duration: 0.25 } }}
+            style={{
+              background: p.bg,
+              border: `1.5px solid ${p.border}`,
+              borderRadius: 18,
+              overflow: 'hidden',
+              cursor: 'default',
+            }}
           >
-            {/* Card Header — always dark gradient */}
-            <div className={`${cfg.headerClass} px-5 py-5 relative overflow-hidden`}>
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10" />
-              <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/5" />
+            {/* ── Card Header — pastel, light, warm ── */}
+            <div style={{
+              padding: '20px 20px 16px',
+              background: p.bg,
+              borderBottom: `1px solid ${p.border}`,
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Decorative blob */}
+              <div style={{
+                position: 'absolute', top: -20, right: -20,
+                width: 80, height: 80, borderRadius: '50%',
+                background: p.border, opacity: 0.4,
+                pointerEvents: 'none',
+              }} />
 
-              <div className="relative flex items-start justify-between">
-                <div className="flex-1 min-w-0 mr-3">
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
+                  {/* Cuisine tag pill */}
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    background: p.tag, border: `1px solid ${p.border}`,
+                    borderRadius: 999, padding: '2px 10px', marginBottom: 8,
+                    fontSize: '0.6rem', fontWeight: 700,
+                    color: p.accent, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  }}>
+                    {r.cuisine_type ?? 'Restaurant'}
+                  </div>
+
+                  {/* Emoji */}
                   <motion.div
-                    className="text-3xl mb-2"
+                    style={{ fontSize: 28, lineHeight: 1, marginBottom: 6 }}
                     whileHover={{ scale: 1.2, rotate: 10 }}
                     transition={{ type: 'spring', stiffness: 300 }}
                   >
-                    {cfg.emoji}
+                    {emoji}
                   </motion.div>
-                  <h3 className="text-white font-bold font-display text-base lg:text-lg leading-tight">
+
+                  {/* Name */}
+                  <h3 style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontSize: '1.05rem', fontWeight: 600,
+                    color: '#1C1917', lineHeight: 1.2, margin: 0,
+                  }}>
                     {r.restaurant_name}
                   </h3>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <MapPin className="w-3 h-3 text-white/60 flex-shrink-0" />
-                    <span className="text-xs text-white/70 truncate">{r.hotel_name}</span>
+
+                  {/* Location */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5 }}>
+                    <MapPin style={{ width: 11, height: 11, color: p.accent, flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.72rem', color: '#78716C' }} className="truncate">
+                      {r.hotel_name}
+                    </span>
                   </div>
-                </div>
-                <div className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                  {r.cuisine_type}
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="relative mt-3">
+              {/* Status badge */}
+              <div style={{ marginTop: 12 }}>
                 {r.is_active ? (
-                  <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 rounded-full px-2.5 py-1">
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: '#F0FDF4', border: '1px solid #BBF7D0',
+                    borderRadius: 999, padding: '3px 10px',
+                  }}>
                     <motion.div
-                      className="w-1.5 h-1.5 rounded-full bg-emerald-400"
+                      style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A', flexShrink: 0 }}
                       animate={{ scale: [1, 1.4, 1] }}
                       transition={{ repeat: Infinity, duration: 2 }}
                     />
-                    <span className="text-xs font-medium text-emerald-300">Open Now</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#15803D' }}>Open Now</span>
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-1.5 bg-rose-500/20 border border-rose-400/30 rounded-full px-2.5 py-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                    <span className="text-xs font-medium text-rose-300">Closed</span>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: '#FFF1F2', border: '1px solid #FECDD3',
+                    borderRadius: 999, padding: '3px 10px',
+                  }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#F43F5E', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#E11D48' }}>Closed</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Card Body */}
-            <div className="p-5">
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-azure-50 flex items-center justify-center flex-shrink-0 group-hover:bg-azure-100 transition-colors">
-                    <Clock className="w-3.5 h-3.5 text-azure-500" />
+            {/* ── Card Body ── */}
+            <div style={{ padding: '16px 20px 20px' }}>
+              {/* Hours & Capacity */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                    background: p.iconBg, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Clock style={{ width: 13, height: 13, color: p.accent }} />
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-xs text-slate-400">Hours</div>
-                    <div className="text-xs font-semibold text-slate-700 truncate">
-                      {formatTime(r.open_time)}–{formatTime(r.close_time)}
+                  <div>
+                    <div style={{ fontSize: '0.65rem', color: '#A8A29E' }}>Hours</div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#1C1917' }} className="truncate">
+                      {formatTime(r.open_time)}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-100 transition-colors">
-                    <Users className="w-3.5 h-3.5 text-amber-500" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                    background: p.iconBg, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Users style={{ width: 13, height: 13, color: p.accent }} />
                   </div>
                   <div>
-                    <div className="text-xs text-slate-400">Capacity</div>
-                    <div className="text-xs font-semibold text-slate-700">{r.capacity ?? '—'} seats</div>
+                    <div style={{ fontSize: '0.65rem', color: '#A8A29E' }}>Capacity</div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#1C1917' }}>
+                      {r.capacity ?? '—'} seats
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 mb-4" />
+              {/* Divider */}
+              <div style={{ height: 1, background: p.border, marginBottom: 14 }} />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 rounded-xl p-3 group-hover:bg-azure-50/50 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <ShoppingBag className="w-3 h-3 text-slate-400" />
-                    <span className="text-xs text-slate-400">Orders</span>
+              {/* Orders & Revenue */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{
+                  background: p.tag, border: `1px solid ${p.border}`,
+                  borderRadius: 12, padding: '10px 12px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <ShoppingBag style={{ width: 11, height: 11, color: p.accent }} />
+                    <span style={{ fontSize: '0.62rem', color: p.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Orders</span>
                   </div>
-                  <div className="text-xl font-bold text-slate-800">{r.order_count}</div>
+                  <div style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontSize: '1.3rem', fontWeight: 600, color: p.accent,
+                  }}>
+                    {r.order_count}
+                  </div>
                 </div>
-                <div className="bg-slate-50 rounded-xl p-3 group-hover:bg-emerald-50/50 transition-colors">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <TrendingUp className="w-3 h-3 text-slate-400" />
-                    <span className="text-xs text-slate-400">Revenue</span>
+                <div style={{
+                  background: '#F0FDF4', border: '1px solid #BBF7D0',
+                  borderRadius: 12, padding: '10px 12px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <TrendingUp style={{ width: 11, height: 11, color: '#16A34A' }} />
+                    <span style={{ fontSize: '0.62rem', color: '#16A34A', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Revenue</span>
                   </div>
-                  <div className="text-sm font-bold text-emerald-600 leading-tight">{formatPKR(r.revenue)}</div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#15803D', lineHeight: 1.2 }}>
+                    {formatPKR(r.revenue)}
+                  </div>
                 </div>
               </div>
             </div>
