@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createBrowserClient } from '@supabase/ssr'
 import {
@@ -685,7 +685,7 @@ export default function StaffPage() {
                         {/* More */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
                           <button
-                            onClick={e => { e.stopPropagation(); setSelectedStaff(s); setShowDetail(true) }}
+                            onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setSelectedStaff(s); setShowDetail(true) }}
                             className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
                           >
                             <MoreHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

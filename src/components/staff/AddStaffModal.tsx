@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type MouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createBrowserClient } from '@supabase/ssr'
 import { X, Loader2, CheckCircle } from 'lucide-react'
@@ -236,7 +236,7 @@ export default function AddStaffModal({ open, hotels, departments, onClose, onSu
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4"
-            onClick={e => e.stopPropagation()}
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
           >
             <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
 

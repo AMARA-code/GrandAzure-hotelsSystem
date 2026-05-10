@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { motion } from 'framer-motion'
 import { createBrowserClient } from '@supabase/ssr'
 import {
@@ -62,7 +62,7 @@ export function RoomDetailModal({ room, onClose, onRefresh }: Props) {
       animate={{ opacity: 1 }}
       exit={{    opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose() }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
