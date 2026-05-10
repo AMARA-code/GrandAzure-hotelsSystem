@@ -1,14 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
+import type { ComponentType } from 'react'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 interface StatCardProps {
   title: string
   value: string
   subtitle?: string
-  icon: LucideIcon
+  icon: ComponentType<{ className?: string }>
   iconColor: string
   iconBg: string
   trend?: number
