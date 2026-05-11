@@ -119,9 +119,11 @@ export default function HeroSection() {
         .particle-drift { animation: particleDrift ease-in-out infinite; }
       `}</style>
 
-      <div className="relative overflow-hidden rounded-3xl border border-[#e8d5b7] bg-[#fffaf4] shadow-[0_8px_60px_rgba(180,120,30,0.12)]">
+      {/* Background: warm light base matching restaurant hero */}
+      <div className="relative overflow-hidden rounded-3xl border border-[#e8d5b7] bg-[#FFF8F2] shadow-[0_8px_60px_rgba(180,120,30,0.12)]">
 
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {/* Warm light ambient glows */}
           <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#f7e4c0]/50 blur-[80px]" />
           <div className="absolute -right-16 top-10 h-80 w-80 rounded-full bg-[#fde8d0]/40 blur-[60px]" />
           <div className="absolute bottom-0 left-1/2 h-48 w-[600px] -translate-x-1/2 rounded-full bg-[#fdf0dc]/60 blur-[50px]" />
@@ -178,11 +180,11 @@ export default function HeroSection() {
               <motion.div variants={fadeUp} className="flex items-center gap-2.5">
                 <div className="inline-flex items-center gap-2 rounded-full border border-[#e0be85] bg-gradient-to-r from-[#fdf3e2] to-[#fff8ee] px-4 py-1.5 shadow-sm">
                   <Sparkles className="h-3.5 w-3.5 text-[#D4722A]" />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a0640e]">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.26em] text-[#a0640e]">
                     Reservation Atelier
                   </span>
                   <span className="h-3 w-px bg-[#D4722A]" />
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-[#D4722A]">
+                  <span className="flex items-center gap-1 text-[9px] font-semibold text-[#D4722A]">
                     <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                     Rooms Available
                   </span>
@@ -190,10 +192,10 @@ export default function HeroSection() {
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <h1 className="font-display text-5xl font-bold leading-[1.08] tracking-tight text-[#2c1a08] sm:text-6xl">
+                <h1 className="font-display leading-[1.05] tracking-tight text-[#2c1a08]" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 400 }}>
                   Curate Your
                   <br />
-                  <span className="gold-shimmer-text font-display text-5xl font-bold italic sm:text-6xl">
+                  <span className="gold-shimmer-text font-display italic" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 400 }}>
                     Perfect Stay
                   </span>
                 </h1>
@@ -213,19 +215,11 @@ export default function HeroSection() {
                 </div>
               </motion.div>
 
-              <motion.p variants={fadeUp} className="max-w-md text-base leading-7 text-[#7b5c38]">
+              <motion.p variants={fadeUp} className="max-w-md text-[#7b5c38]" style={{ fontSize: 'clamp(0.8rem, 1.4vw, 0.88rem)', lineHeight: 1.9, fontWeight: 400, letterSpacing: '0.01em' }}>
                 Handpicked rooms, dynamic seasonal privileges, and seamless confirmation — crafted for the discerning traveller who expects nothing less than extraordinary.
               </motion.p>
 
-              <motion.div variants={fadeUp}>
-                <button className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full border border-[#D4722A] bg-[#D4722A] px-7 py-3.5 text-sm font-bold tracking-wide text-white shadow-[0_4px_24px_rgba(212,114,42,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(212,114,42,0.5)]">
-                  <span className="relative z-10">Begin Your Reservation</span>
-                  <span className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 group-hover:translate-x-0.5">
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                </button>
-              </motion.div>
+      
             </div>
 
             <motion.div
@@ -256,25 +250,51 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
+          {/* ── RIGHT PANEL — Image with light warm gradients (restaurant-style) ── */}
           <motion.div
             variants={fadeLeft}
             initial="hidden"
             animate="visible"
             className="relative flex flex-col border-t border-[#e8d5b7] lg:border-l lg:border-t-0"
           >
-            <div className="relative flex-1 overflow-hidden bg-[#fdf5e8]">
+            <div className="relative flex-1 overflow-hidden bg-[#FFF8F2]">
               <TiltCard>
                 <div className="relative h-full min-h-[300px] w-full">
                   <Image
                     src="/images/hero-room.jpg"
                     alt="Luxury suite interior"
                     fill
-                    className="object-cover"
+                    className="object-cover object-center"
                     priority
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#2c1a08]/30 via-transparent to-[#fdf5e8]/10" />
-                  <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[#fdf5e8]/20" />
 
+                  {/* ── Light warm overlay layers matching restaurant hero ── */}
+
+                  {/* Left-to-right warm fade: strong on left, partial on right */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'linear-gradient(to right, rgba(255,248,242,0.82) 0%, rgba(255,248,242,0.48) 38%, rgba(255,248,242,0.18) 65%, rgba(255,248,242,0.32) 100%)',
+                    }}
+                  />
+
+                  {/* Bottom fade to warm white */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'linear-gradient(to top, rgba(255,248,242,0.96) 0%, rgba(255,248,242,0.28) 20%, transparent 42%)',
+                    }}
+                  />
+
+                  {/* Top vignette */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'linear-gradient(to bottom, rgba(255,248,242,0.60) 0%, transparent 24%)',
+                    }}
+                  />
+
+                  {/* Rating badge */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -286,6 +306,7 @@ export default function HeroSection() {
                     <span className="text-[10px] text-[#a06828]">/ 5.0</span>
                   </motion.div>
 
+                  {/* Thumbnail strip */}
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -300,6 +321,7 @@ export default function HeroSection() {
                     </div>
                   </motion.div>
 
+                  {/* Spinning ornament */}
                   <div className="absolute right-4 bottom-20 h-10 w-10 spin-slow opacity-25">
                     <svg viewBox="0 0 40 40" fill="none">
                       <circle cx="20" cy="20" r="18" stroke="#D4722A" strokeWidth="0.8" strokeDasharray="4 3" />
@@ -309,6 +331,7 @@ export default function HeroSection() {
                 </div>
               </TiltCard>
 
+              {/* Floating availability pill */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -323,6 +346,7 @@ export default function HeroSection() {
               </motion.div>
             </div>
 
+            {/* Guest Privileges panel */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
