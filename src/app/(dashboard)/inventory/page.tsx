@@ -194,6 +194,7 @@ export default function InventoryPage() {
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null);
   const [restockItem, setRestockItem] = useState<InventoryItem | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -278,6 +279,75 @@ export default function InventoryPage() {
     else { toast.success("Item deleted"); fetchData(); }
   };
 
+  const exportToCSV = () => {
+    const headers = [
+      "Item Name", "SKU", "Category", "Hotel", "City", "Unit",
+      "Unit Cost", "Current Stock", "Reorder Level", "Max Stock",
+      "Supplier", "Stock Value", "Status",
+    ];
+    const rows = filtered.map(item => {
+      const { label } = getStockStatus(item);
+      return [
+        item.item_name,
+        item.sku,
+        item.category_name || "",
+        item.hotel_name || "",
+        item.city || "",
+        item.unit,
+        item.unit_cost.toFixed(2),
+        item.current_stock,
+        item.reorder_level,
+        item.max_stock,
+        item.supplier,
+        (item.current_stock * item.unit_cost).toFixed(2),
+        label,
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inventory_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+    toast.success(`Exported ${filtered.length} items as CSV`);
+  };
+
+  const exportToJSON = () => {
+    const data = filtered.map(item => ({
+      item_id: item.item_id,
+      item_name: item.item_name,
+      sku: item.sku,
+      category: item.category_name,
+      hotel: item.hotel_name,
+      city: item.city,
+      unit: item.unit,
+      unit_cost: item.unit_cost,
+      current_stock: item.current_stock,
+      reorder_level: item.reorder_level,
+      max_stock: item.max_stock,
+      supplier: item.supplier,
+      stock_value: parseFloat((item.current_stock * item.unit_cost).toFixed(2)),
+      status: getStockStatus(item).label,
+    }));
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inventory_export_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+    toast.success(`Exported ${filtered.length} items as JSON`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -303,9 +373,62 @@ export default function InventoryPage() {
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600 transition-all text-sm shadow-sm">
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
-            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 transition-all text-sm shadow-sm">
-              <Download className="w-4 h-4" /> Export
-            </button>
+
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setExportOpen(prev => !prev)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 transition-all text-sm shadow-sm"
+              >
+                <Download className="w-4 h-4" /> Export
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", exportOpen && "rotate-180")} />
+              </button>
+              <AnimatePresence>
+                {exportOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 z-20 overflow-hidden"
+                    >
+                      <div className="p-2">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-2 pt-1 pb-2">
+                          Export {filtered.length} item{filtered.length !== 1 ? "s" : ""}
+                        </p>
+                        <button
+                          onClick={exportToCSV}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                            <Download className="w-3.5 h-3.5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium leading-tight">Export as CSV</p>
+                            <p className="text-xs text-slate-400">Spreadsheet compatible</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={exportToJSON}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <Download className="w-3.5 h-3.5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium leading-tight">Export as JSON</p>
+                            <p className="text-xs text-slate-400">Developer friendly</p>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
             <button onClick={() => setAddOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-azure text-white font-medium text-sm shadow-azure hover:opacity-90 transition-all">
               <Plus className="w-4 h-4" /> Add Item
             </button>

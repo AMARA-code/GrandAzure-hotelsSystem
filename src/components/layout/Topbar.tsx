@@ -61,6 +61,219 @@ function initials(first: string, last: string) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   PremiumAvatar — illustrated person avatar
+───────────────────────────────────────────────────────────── */
+interface PremiumAvatarProps {
+  size?: number
+  rounded?: 'full' | 'md' | 'lg' | 'xl'
+  className?: string
+  style?: React.CSSProperties
+}
+
+function PremiumAvatar({ size = 28, rounded = 'full', className, style }: PremiumAvatarProps) {
+  const s   = size
+  const cx  = s / 2
+  const cy  = s / 2
+  const r   = cx - 0.5
+
+  const radiiMap = { full: r, md: s * 0.22, lg: s * 0.28, xl: s * 0.34 }
+  const clipR    = radiiMap[rounded]
+
+  const uid = `av-${s}-${rounded}`
+
+  return (
+    <svg
+      width={s}
+      height={s}
+      viewBox={`0 0 ${s} ${s}`}
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <defs>
+        <clipPath id={uid}>
+          {rounded === 'full'
+            ? <circle cx={cx} cy={cy} r={r} />
+            : <rect x={0} y={0} width={s} height={s} rx={clipR} />
+          }
+        </clipPath>
+      </defs>
+
+      {/* ── skin background ── */}
+      <rect x={0} y={0} width={s} height={s} fill="#F5C9A8" clipPath={`url(#${uid})`} />
+
+      {/* ── shirt ── */}
+      <ellipse
+        cx={cx} cy={s * 1.06}
+        rx={s * 0.40} ry={s * 0.26}
+        fill="#C4621A"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── collar white ── */}
+      <path
+        d={`M${cx - s * 0.145} ${s * 0.745}
+            L${cx} ${s * 0.875}
+            L${cx + s * 0.145} ${s * 0.745}
+            L${cx + s * 0.115} ${s * 0.67}
+            L${cx} ${s * 0.75}
+            L${cx - s * 0.115} ${s * 0.67} Z`}
+        fill="white"
+        opacity={0.92}
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── neck ── */}
+      <rect
+        x={cx - s * 0.10} y={s * 0.575}
+        width={s * 0.20} height={s * 0.22}
+        rx={s * 0.10}
+        fill="#E8A87C"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── head ── */}
+      <ellipse
+        cx={cx} cy={s * 0.435}
+        rx={s * 0.305} ry={s * 0.325}
+        fill="#F0B080"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── hair top ── */}
+      <path
+        d={`M${cx - s * 0.305} ${s * 0.41}
+            Q${cx - s * 0.305} ${s * 0.10} ${cx} ${s * 0.10}
+            Q${cx + s * 0.305} ${s * 0.10} ${cx + s * 0.305} ${s * 0.41}
+            Q${cx + s * 0.245} ${s * 0.235} ${cx} ${s * 0.235}
+            Q${cx - s * 0.245} ${s * 0.235} ${cx - s * 0.305} ${s * 0.41}Z`}
+        fill="#5C3A1A"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── ear L ── */}
+      <ellipse
+        cx={cx - s * 0.305} cy={s * 0.45}
+        rx={s * 0.052} ry={s * 0.082}
+        fill="#E8A87C"
+        clipPath={`url(#${uid})`}
+      />
+      {/* ── ear R ── */}
+      <ellipse
+        cx={cx + s * 0.305} cy={s * 0.45}
+        rx={s * 0.052} ry={s * 0.082}
+        fill="#E8A87C"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── eye L whites ── */}
+      <ellipse
+        cx={cx - s * 0.11} cy={s * 0.445}
+        rx={s * 0.065} ry={s * 0.062}
+        fill="white"
+        clipPath={`url(#${uid})`}
+      />
+      {/* ── eye L iris ── */}
+      <ellipse
+        cx={cx - s * 0.11} cy={s * 0.447}
+        rx={s * 0.042} ry={s * 0.042}
+        fill="#3D2008"
+        clipPath={`url(#${uid})`}
+      />
+      {/* ── eye L shine ── */}
+      <circle
+        cx={cx - s * 0.088} cy={s * 0.428}
+        r={s * 0.014}
+        fill="white"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── eye R whites ── */}
+      <ellipse
+        cx={cx + s * 0.11} cy={s * 0.445}
+        rx={s * 0.065} ry={s * 0.062}
+        fill="white"
+        clipPath={`url(#${uid})`}
+      />
+      {/* ── eye R iris ── */}
+      <ellipse
+        cx={cx + s * 0.11} cy={s * 0.447}
+        rx={s * 0.042} ry={s * 0.042}
+        fill="#3D2008"
+        clipPath={`url(#${uid})`}
+      />
+      {/* ── eye R shine ── */}
+      <circle
+        cx={cx + s * 0.132} cy={s * 0.428}
+        r={s * 0.014}
+        fill="white"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── brow L ── */}
+      <path
+        d={`M${cx - s * 0.175} ${s * 0.375}
+            Q${cx - s * 0.11} ${s * 0.345}
+            ${cx - s * 0.045} ${s * 0.375}`}
+        stroke="#5C3A1A"
+        strokeWidth={s * 0.038}
+        fill="none"
+        strokeLinecap="round"
+        clipPath={`url(#${uid})`}
+      />
+      {/* ── brow R ── */}
+      <path
+        d={`M${cx + s * 0.045} ${s * 0.375}
+            Q${cx + s * 0.11} ${s * 0.345}
+            ${cx + s * 0.175} ${s * 0.375}`}
+        stroke="#5C3A1A"
+        strokeWidth={s * 0.038}
+        fill="none"
+        strokeLinecap="round"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── nose ── */}
+      <ellipse
+        cx={cx} cy={s * 0.535}
+        rx={s * 0.04} ry={s * 0.026}
+        fill="#D4895C"
+        opacity={0.45}
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── smile ── */}
+      <path
+        d={`M${cx - s * 0.125} ${s * 0.585}
+            Q${cx} ${s * 0.635}
+            ${cx + s * 0.125} ${s * 0.585}`}
+        stroke="#C06040"
+        strokeWidth={s * 0.030}
+        fill="none"
+        strokeLinecap="round"
+        clipPath={`url(#${uid})`}
+      />
+
+      {/* ── subtle cheek blush ── */}
+      <ellipse
+        cx={cx - s * 0.22} cy={s * 0.52}
+        rx={s * 0.07} ry={s * 0.045}
+        fill="#E87050"
+        opacity={0.13}
+        clipPath={`url(#${uid})`}
+      />
+      <ellipse
+        cx={cx + s * 0.22} cy={s * 0.52}
+        rx={s * 0.07} ry={s * 0.045}
+        fill="#E87050"
+        opacity={0.13}
+        clipPath={`url(#${uid})`}
+      />
+    </svg>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
    MobileTicker
 ───────────────────────────────────────────────────────────── */
 function MobileTicker({ items }: { items: TickerItem[] }) {
@@ -134,7 +347,7 @@ function MobileTicker({ items }: { items: TickerItem[] }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   NAV_ITEMS — matches navigation constants exactly
+   NAV_ITEMS
 ───────────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
   { label: 'Dashboard',    icon: LayoutDashboard,  route: '/dashboard'    },
@@ -186,10 +399,9 @@ function MobileDrawer({
     }
   }, [open])
 
-  const displayName     = currentUser?.fullName  ?? '—'
-  const displayEmail    = currentUser?.email     ?? '—'
-  const displayRole     = currentUser?.roleName  ?? '—'
-  const displayInitials = currentUser?.initials  ?? '?'
+  const displayName  = currentUser?.fullName ?? '—'
+  const displayEmail = currentUser?.email   ?? '—'
+  const displayRole  = currentUser?.roleName ?? '—'
 
   const notifItems = stats ? [
     { label: 'Arrivals Today',       value: String(stats.arrivalsToday),      route: '/bookings',     color: 'text-sky-600'     },
@@ -238,19 +450,25 @@ function MobileDrawer({
             {drawerView === 'main' && (
               <div className="flex flex-col" style={{ maxHeight: 'calc(88dvh - 24px)' }}>
 
-                {/* profile strip — fixed */}
+                {/* profile strip */}
                 <button
                   onClick={() => setDrawerView('profile')}
                   className="flex items-center gap-3 px-5 py-4 border-b border-[#eedcc8] hover:bg-[#fdf4ea] transition-colors text-left w-full flex-shrink-0"
                 >
+                  {/* ── premium avatar 44px ── */}
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: '#FDF8F2', border: '1.5px solid #F3DCC0', boxShadow: '0 2px 8px rgba(212,114,42,0.10)' }}
+                    className="flex-shrink-0 rounded-xl overflow-hidden"
+                    style={{
+                      width: 44,
+                      height: 44,
+                      border: '1.5px solid #F3DCC0',
+                      boxShadow: '0 2px 8px rgba(212,114,42,0.10)',
+                      background: '#FDF8F2',
+                    }}
                   >
-                    <span className="font-bold text-sm leading-none" style={{ color: '#944A15' }}>
-                      {displayInitials}
-                    </span>
+                    <PremiumAvatar size={44} rounded="full" />
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#3d2008] truncate">{displayName}</p>
                     <p className="text-xs text-[#9a7558] truncate">{displayEmail}</p>
@@ -264,7 +482,7 @@ function MobileDrawer({
                   </div>
                 </button>
 
-                {/* bell / notifications — fixed */}
+                {/* bell / notifications */}
                 <button
                   onClick={() => setDrawerView('notifications')}
                   className="flex items-center gap-3 px-5 py-3.5 border-b border-[#eedcc8] hover:bg-[#fdf4ea] transition-colors text-left w-full flex-shrink-0"
@@ -333,13 +551,18 @@ function MobileDrawer({
 
                 <div className="p-5 space-y-4">
                   <div className="flex items-center gap-4">
+                    {/* ── premium avatar 56px ── */}
                     <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: '#FDF8F2', border: '2px solid #F3DCC0', boxShadow: '0 4px 16px rgba(212,114,42,0.12)' }}
+                      className="flex-shrink-0 rounded-2xl overflow-hidden"
+                      style={{
+                        width: 56,
+                        height: 56,
+                        border: '2px solid #F3DCC0',
+                        boxShadow: '0 4px 16px rgba(212,114,42,0.12)',
+                        background: '#FDF8F2',
+                      }}
                     >
-                      <span className="text-lg font-bold leading-none" style={{ color: '#944A15' }}>
-                        {displayInitials}
-                      </span>
+                      <PremiumAvatar size={56} rounded="full" />
                     </div>
                     <div>
                       <p className="text-base font-bold text-[#3d2008]">{displayName}</p>
@@ -569,10 +792,9 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     setDropdownView('main')
   }
 
-  const displayName     = currentUser?.fullName  ?? '—'
-  const displayEmail    = currentUser?.email     ?? '—'
-  const displayRole     = currentUser?.roleName  ?? '—'
-  const displayInitials = currentUser?.initials  ?? '?'
+  const displayName  = currentUser?.fullName  ?? '—'
+  const displayEmail = currentUser?.email     ?? '—'
+  const displayRole  = currentUser?.roleName  ?? '—'
 
   const occupancyPct = stats
     ? Math.round((stats.occupiedRooms / stats.totalRooms) * 100)
@@ -751,17 +973,21 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
             <div ref={userDropdownRef} className="relative">
               <button
                 onClick={() => { setUserDropdown(!userDropdown); setDropdownView('main') }}
-                className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-lg border border-[#e9dac9] bg-gradient-to-r from-[#fff9f2] to-[#fdf4ea] hover:opacity-90 transition-all"
+                className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg border border-[#e9dac9] bg-gradient-to-r from-[#fff9f2] to-[#fdf4ea] hover:opacity-90 transition-all"
               >
+                {/* ── premium avatar 28px in button ── */}
                 <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ background: '#FDF8F2', border: '1.5px solid #F3DCC0' }}
+                  className="rounded-md overflow-hidden flex-shrink-0"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    border: '1.5px solid #F3DCC0',
+                    background: '#FDF8F2',
+                  }}
                 >
-                  {currentUser
-                    ? <span className="text-[10px] font-bold leading-none" style={{ color: '#944A15' }}>{displayInitials}</span>
-                    : <User className="w-3 h-3" style={{ color: '#944A15' }} />
-                  }
+                  <PremiumAvatar size={28} rounded="md" />
                 </div>
+
                 <div className="hidden sm:block text-left">
                   <p className="text-[11px] font-semibold text-foreground leading-tight truncate max-w-[88px]">
                     {currentUser?.firstName ?? '—'}
@@ -829,13 +1055,18 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                         </div>
                         <div className="p-3 space-y-3">
                           <div className="flex items-center gap-3">
+                            {/* ── premium avatar 44px in desktop dropdown ── */}
                             <div
-                              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                              style={{ background: '#FDF8F2', border: '1.5px solid #F3DCC0', boxShadow: '0 2px 8px rgba(212,114,42,0.1)' }}
+                              className="flex-shrink-0 rounded-xl overflow-hidden"
+                              style={{
+                                width: 44,
+                                height: 44,
+                                border: '1.5px solid #F3DCC0',
+                                boxShadow: '0 2px 8px rgba(212,114,42,0.1)',
+                                background: '#FDF8F2',
+                              }}
                             >
-                              <span className="text-sm font-bold leading-none" style={{ color: '#944A15' }}>
-                                {displayInitials}
-                              </span>
+                              <PremiumAvatar size={44} rounded="full" />
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-foreground leading-tight truncate">{displayName}</p>

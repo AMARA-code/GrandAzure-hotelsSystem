@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, ArrowRight, Sparkles, CheckCircle2, RotateCcw, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,7 @@ type Step = 'request' | 'sent' | 'reset' | 'success'
 
 export default function ForgotPasswordPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [step, setStep] = useState<Step>('request')
   const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -20,56 +21,87 @@ export default function ForgotPasswordPage() {
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [bootstrapping, setBootstrapping] = useState(true)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
 
-  const appUrl = (() => {
-    const raw = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim()
-    if (!raw) return ''
-    const deduped = raw.includes('/https://') ? raw.split('/https://')[0] : raw
-    return deduped.replace(/\/+$/, '')
-  })()
-  const resetRedirectUrl = `${appUrl || window.location.origin}/forgot-password?step=reset`
+  // Hardcoded to the deployed Vercel domain — works on every device.
+  // The path /forgot-password matches src/app/(auth)/forgetpassword/forgot-password/page.tsx
+  // because Next.js strips route groups like (auth) and the parent folder name
+  // is not part of the URL — only the innermost segment "forgot-password" is.
+  const appUrl = 'https://grand-azure-hotels-system.vercel.app'
+  const resetRedirectUrl = `${appUrl}/forgot-password?step=reset`
 
   useEffect(() => {
-    const code = searchParams.get('code')
-    const stepParam = searchParams.get('step')
-    const queryType = searchParams.get('type')
-
-    if (stepParam === 'reset') setStep('reset')
-
     const bootstrapRecovery = async () => {
-      const supabase = createClient()
+      setBootstrapping(true)
+      try {
+        const supabase = createClient()
 
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          toast.error('Reset link is invalid or expired. Request a new one.')
+        // ── FIX 3: Handle PKCE "code" param (Supabase default since v2.x)
+        // Supabase emails a link like: /forgot-password?code=xxxx
+        // exchangeCodeForSession() converts it into an active session.
+        const code = searchParams.get('code')
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) {
+            toast.error('Reset link is invalid or expired. Please request a new one.')
+            setStep('request')
+          } else {
+            // ── FIX 4: After exchanging the code, remove it from the URL
+            // so that a page refresh doesn't try to exchange the same
+            // (now-consumed) code again, which would error out.
+            router.replace('/forgot-password?step=reset')
+            setStep('reset')
+          }
           return
         }
-        setStep('reset')
-        return
-      }
 
-      if (typeof window !== 'undefined' && window.location.hash) {
-        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-        const hashType = hash.get('type')
-        const accessToken = hash.get('access_token')
-        const refreshToken = hash.get('refresh_token')
+        // ── FIX 5: Handle legacy implicit-flow hash tokens
+        // Older Supabase setups (or "implicit" flow in Supabase dashboard)
+        // append #access_token=...&type=recovery to the URL instead of ?code=.
+        if (typeof window !== 'undefined' && window.location.hash) {
+          const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+          const hashType = hash.get('type')
+          const accessToken = hash.get('access_token')
+          const refreshToken = hash.get('refresh_token')
 
-        if (hashType === 'recovery' && accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-          if (!error) setStep('reset')
+          if (hashType === 'recovery' && accessToken && refreshToken) {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            if (!error) {
+              // Clean the hash from the URL
+              router.replace('/forgot-password?step=reset')
+              setStep('reset')
+              return
+            }
+          }
         }
-      }
 
-      if (queryType === 'recovery') setStep('reset')
+        // ── FIX 6: Handle ?step=reset when the code was already exchanged
+        // (i.e. after router.replace above on a subsequent render)
+        const stepParam = searchParams.get('step')
+        if (stepParam === 'reset') {
+          // Confirm there's actually a valid session before showing the form.
+          // Without this check, someone could manually type ?step=reset and
+          // see the password form with no active session, causing a 403 later.
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+            setStep('reset')
+          } else {
+            toast.error('Your reset session has expired. Please request a new link.')
+            setStep('request')
+          }
+        }
+      } finally {
+        setBootstrapping(false)
+      }
     }
 
     bootstrapRecovery()
-  }, [searchParams])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run once on mount only — searchParams are read synchronously inside
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -119,6 +151,8 @@ export default function ForgotPasswordPage() {
       const supabase = createClient()
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) { toast.error(error.message); return }
+      // Sign out all other sessions so old sessions can't be reused
+      await supabase.auth.signOut({ scope: 'others' })
       setStep('success')
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -145,14 +179,28 @@ export default function ForgotPasswordPage() {
     { label: 'New Password', done: step === 'success'                     },
   ]
 
-  // Shared input class — matches login/signup style
   const inputClass = 'w-full pl-11 pr-4 py-3.5 rounded-2xl border border-stone-200 bg-white text-stone-800 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-[#c9703a]/12 focus:border-[#c9703a] hover:border-[#c9703a]/40 hover:shadow-[0_0_0_3px_rgba(201,112,58,0.05)] transition-all duration-200 text-sm'
   const passwordInputClass = 'w-full pl-11 pr-12 py-3.5 rounded-2xl border border-stone-200 bg-white text-stone-800 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-[#c9703a]/12 focus:border-[#c9703a] hover:border-[#c9703a]/40 hover:shadow-[0_0_0_3px_rgba(201,112,58,0.05)] transition-all duration-200 text-sm'
 
-  // Black primary button style
   const btnPrimaryStyle = {
     background: 'linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)',
     boxShadow: '0 4px 14px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15)',
+  }
+
+  // ── FIX 7: Show a loading state while bootstrapping to avoid
+  // a flash of the "request" form before the session is confirmed.
+  if (bootstrapping) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'linear-gradient(145deg, #f8f6f3 0%, #f3ede6 50%, #f7f4f1 100%)' }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#c9703a]/30 border-t-[#c9703a] rounded-full animate-spin" />
+          <p className="text-sm text-stone-400 font-medium">Verifying reset link…</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -160,7 +208,7 @@ export default function ForgotPasswordPage() {
       className="min-h-screen flex items-start justify-center px-2 py-6 md:px-3 md:py-8 relative"
       style={{ background: 'linear-gradient(145deg, #f8f6f3 0%, #f3ede6 50%, #f7f4f1 100%)' }}
     >
-      {/* Ambient blobs — lighter & airy */}
+      {/* Ambient blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-35 blur-[140px]"
           style={{ background: 'radial-gradient(circle, #eddbc8 0%, #e8cdb5 60%, transparent 100%)' }} />
@@ -170,7 +218,6 @@ export default function ForgotPasswordPage() {
           style={{ background: 'radial-gradient(circle, #ede8fb 0%, #e0d8f8 60%, transparent 100%)' }} />
         <div className="absolute bottom-1/3 left-1/4 w-[320px] h-[320px] rounded-full opacity-18 blur-[80px]"
           style={{ background: 'radial-gradient(circle, #d4f0e2 0%, #c0e8d2 60%, transparent 100%)' }} />
-        {/* Dot grid */}
         <div className="absolute inset-0 opacity-[0.018]"
           style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #b87840 1px, transparent 0)', backgroundSize: '28px 28px' }} />
       </div>
@@ -214,11 +261,9 @@ export default function ForgotPasswordPage() {
             className="relative hidden lg:flex flex-col justify-between p-7 rounded-l-3xl"
             style={{ background: 'linear-gradient(160deg, #ffffff 0%, #faf6f2 40%, #f5ede3 100%)' }}
           >
-            {/* Dot texture */}
             <div className="absolute inset-0 opacity-[0.025] pointer-events-none rounded-l-3xl"
               style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #b87840 1px, transparent 0)', backgroundSize: '20px 20px' }} />
 
-            {/* Floating shapes — reduced opacity */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-l-3xl">
               <div className="absolute top-10 right-4  w-24 h-24 rounded-2xl rotate-12  bg-rose-100/35   border border-rose-200/35"   />
               <div className="absolute top-1/3 right-0  w-14 h-14 rounded-xl -rotate-6  bg-sky-100/32    border border-sky-200/30"    />
@@ -227,14 +272,12 @@ export default function ForgotPasswordPage() {
               <div className="absolute top-1/2 left-2   w-10 h-10 rounded-xl rotate-20  bg-amber-100/35   border border-amber-200/30"  />
             </div>
 
-            {/* Star ornament */}
             <div className="absolute top-5 right-5 opacity-[0.07]">
               <svg width="72" height="72" viewBox="0 0 60 60" fill="none">
                 <path d="M30 5L35 20L51 20L38 30L43 46L30 37L17 46L22 30L9 20L25 20Z" stroke="#c9703a" strokeWidth="1.5" fill="none" />
               </svg>
             </div>
 
-            {/* Brand — unchanged BrandMark */}
             <div className="relative z-10">
               <div className="inline-flex items-center rounded-2xl border border-white/80 bg-white/75 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                 <BrandMark />
@@ -256,7 +299,6 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              {/* Progress stepper */}
               <div className="space-y-2">
                 {steps.map((s, i) => (
                   <motion.div
@@ -280,7 +322,6 @@ export default function ForgotPasswordPage() {
                 ))}
               </div>
 
-              {/* Security cards */}
               <div className="grid grid-cols-2 gap-2">
                 {securityCards.map((c, i) => (
                   <motion.div
@@ -300,7 +341,6 @@ export default function ForgotPasswordPage() {
 
             <p className="relative z-10 text-[10px] text-stone-300 tracking-wide">© 2025 Grand Azure Hotel Group</p>
 
-            {/* Gold bottom line */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] rounded-bl-3xl"
               style={{ background: 'linear-gradient(90deg, transparent, #c9703a 30%, #c9703a 70%, transparent)' }} />
           </div>
@@ -310,7 +350,6 @@ export default function ForgotPasswordPage() {
             className="px-6 py-8 lg:px-10 lg:py-10 rounded-r-3xl"
             style={{ background: '#ffffff' }}
           >
-            {/* Mobile brand */}
             <div className="flex lg:hidden justify-center mb-6">
               <BrandMark />
             </div>
@@ -356,7 +395,6 @@ export default function ForgotPasswordPage() {
                       </div>
                     </div>
 
-                    {/* Info note */}
                     <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-amber-50 border border-amber-200/70">
                       <div className="w-5 h-5 rounded-full bg-amber-200 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span className="text-amber-700 text-[10px] font-bold">i</span>
@@ -430,7 +468,6 @@ export default function ForgotPasswordPage() {
                     The link expires in 5 minutes.
                   </p>
 
-                  {/* Steps list */}
                   <div className="w-full space-y-2 mb-6">
                     {[
                       { text: 'Open the email from Grand Azure',       color: 'bg-rose-50   border-rose-200/70   text-rose-700'   },
@@ -451,7 +488,6 @@ export default function ForgotPasswordPage() {
                     ))}
                   </div>
 
-                  {/* Resend — black outlined button */}
                   <motion.button
                     whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.99 }}
                     onClick={handleResend} disabled={loading}
@@ -497,7 +533,6 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <form onSubmit={handleResetPassword} className="space-y-4">
-                    {/* New password */}
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a6a50]">New Password</label>
                       <div className="relative group">
@@ -515,7 +550,6 @@ export default function ForgotPasswordPage() {
                       </div>
                     </div>
 
-                    {/* Confirm password */}
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a6a50]">Confirm Password</label>
                       <div className="relative group">
@@ -547,7 +581,6 @@ export default function ForgotPasswordPage() {
                       )}
                     </div>
 
-                    {/* Password tips */}
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { text: '8+ characters',     color: 'bg-rose-50   border-rose-200/70   text-rose-700'   },

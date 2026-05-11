@@ -6,7 +6,7 @@ import {
   TrendingUp, FileText, CreditCard, Building2,
   ArrowUpRight, Receipt, Banknote, Landmark,
   Eye, Download, Search, X, RefreshCw,
-  CheckCircle2, Wallet
+  CheckCircle2, Wallet, ChevronDown
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { format, parseISO } from 'date-fns'
@@ -361,13 +361,13 @@ export default function FinancePage() {
   const [selectedHotel,   setSelectedHotel]   = useState<number | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [activeTab,       setActiveTab]       = useState<'overview' | 'invoices' | 'payments'>('overview')
+  const [exportOpen,      setExportOpen]      = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
     setLoading(true)
     try {
-      // Fetch all four tables separately (safest approach with this schema)
       const [invRes, payRes, bookRes, guestRes, hotelRes] = await Promise.all([
         supabase.from('invoices').select('*').order('invoice_date', { ascending: false }),
         supabase.from('payments').select('*').order('paid_at', { ascending: false }),
@@ -376,7 +376,6 @@ export default function FinancePage() {
         supabase.from('hotels').select('hotel_id, hotel_name'),
       ])
 
-      // Build lookup maps
       const bookingMap = Object.fromEntries(
         (bookRes.data || []).map((b: any) => [b.booking_id, b])
       )
@@ -387,7 +386,6 @@ export default function FinancePage() {
         (hotelRes.data || []).map((h: any) => [h.hotel_id, h])
       )
 
-      // Manually join invoices
       if (invRes.data) {
         const mapped: Invoice[] = invRes.data.map((inv: any) => {
           const booking = bookingMap[inv.booking_id] || {}
@@ -407,7 +405,6 @@ export default function FinancePage() {
         setInvoices(mapped)
       }
 
-      // Manually join payments with invoice_no
       if (payRes.data && invRes.data) {
         const invoiceMap = Object.fromEntries(
           (invRes.data || []).map((i: any) => [i.invoice_id, i])
@@ -449,6 +446,124 @@ export default function FinancePage() {
     count: m.count,
   }))
 
+  // ── Export helpers ──────────────────────────────────────────────────────────
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const dateTag = new Date().toISOString().slice(0, 10)
+
+  const exportInvoicesCSV = () => {
+    const headers = [
+      'Invoice No', 'Invoice Date', 'Guest Name', 'Email', 'Hotel',
+      'Check-In', 'Check-Out', 'Subtotal', 'Discount', 'Tax Rate',
+      'Tax Amount', 'Total Amount', 'Paid Amount', 'Balance Due',
+      'Currency', 'Status',
+    ]
+    const rows = filteredInvoices.map(inv => [
+      inv.invoice_no,
+      inv.invoice_date,
+      `${inv.first_name} ${inv.last_name}`,
+      inv.email ?? '',
+      inv.hotel_name ?? '',
+      inv.check_in_date ?? '',
+      inv.check_out_date ?? '',
+      parseFloat(inv.subtotal).toFixed(2),
+      parseFloat(inv.discount_amount).toFixed(2),
+      inv.tax_rate,
+      parseFloat(inv.tax_amount).toFixed(2),
+      parseFloat(inv.total_amount).toFixed(2),
+      parseFloat(inv.paid_amount).toFixed(2),
+      parseFloat(inv.balance_due).toFixed(2),
+      inv.currency_code,
+      inv.status,
+    ])
+    const csv = [headers, ...rows]
+      .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `invoices_${dateTag}.csv`)
+    setExportOpen(false)
+  }
+
+  const exportPaymentsCSV = () => {
+    const headers = [
+      'Payment ID', 'Transaction Ref', 'Invoice No', 'Payment Method',
+      'Amount', 'Currency', 'Status', 'Paid At',
+    ]
+    const rows = payments.map(p => [
+      p.payment_id,
+      p.transaction_ref,
+      p.invoice_no ?? '',
+      METHOD_CONFIG[p.payment_method]?.label ?? p.payment_method,
+      parseFloat(p.amount).toFixed(2),
+      p.currency_code,
+      p.payment_status,
+      p.paid_at,
+    ])
+    const csv = [headers, ...rows]
+      .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `payments_${dateTag}.csv`)
+    setExportOpen(false)
+  }
+
+  const exportFullJSON = () => {
+    const data = {
+      exported_at: new Date().toISOString(),
+      summary: {
+        total_revenue: totalRevenue,
+        total_collected: totalCollected,
+        total_invoices: totalInvoices,
+        total_payments: payments.length,
+      },
+      hotel_breakdown: HOTEL_SEED,
+      monthly_revenue: MONTHLY_SEED,
+      payment_methods: METHOD_SEED.map(m => ({
+        method: m.payment_method,
+        label: METHOD_CONFIG[m.payment_method]?.label,
+        count: m.count,
+        total_amount: m.total_amount,
+      })),
+      invoices: filteredInvoices.map(inv => ({
+        invoice_no: inv.invoice_no,
+        invoice_date: inv.invoice_date,
+        guest: `${inv.first_name} ${inv.last_name}`,
+        email: inv.email,
+        hotel: inv.hotel_name,
+        check_in: inv.check_in_date,
+        check_out: inv.check_out_date,
+        subtotal: parseFloat(inv.subtotal),
+        discount: parseFloat(inv.discount_amount),
+        tax_rate: inv.tax_rate,
+        tax_amount: parseFloat(inv.tax_amount),
+        total: parseFloat(inv.total_amount),
+        paid: parseFloat(inv.paid_amount),
+        balance: parseFloat(inv.balance_due),
+        currency: inv.currency_code,
+        status: inv.status,
+      })),
+      payments: payments.map(p => ({
+        transaction_ref: p.transaction_ref,
+        invoice_no: p.invoice_no,
+        method: METHOD_CONFIG[p.payment_method]?.label ?? p.payment_method,
+        amount: parseFloat(p.amount),
+        currency: p.currency_code,
+        status: p.payment_status,
+        paid_at: p.paid_at,
+      })),
+    }
+    triggerDownload(
+      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      `finance_export_${dateTag}.json`
+    )
+    setExportOpen(false)
+  }
+
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -487,10 +602,80 @@ export default function FinancePage() {
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
             </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white gradient-azure rounded-xl shadow-azure hover:opacity-90 transition-all">
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
+
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setExportOpen(prev => !prev)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white gradient-azure rounded-xl shadow-azure hover:opacity-90 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export</span>
+                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', exportOpen && 'rotate-180')} />
+              </button>
+
+              <AnimatePresence>
+                {exportOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-lg border border-slate-100 z-20 overflow-hidden"
+                    >
+                      <div className="p-2">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-2 pt-1 pb-2">
+                          Export Data
+                        </p>
+
+                        <button
+                          onClick={exportInvoicesCSV}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold leading-tight">Invoices CSV</p>
+                            <p className="text-xs text-slate-400">{filteredInvoices.length} invoices · spreadsheet</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={exportPaymentsCSV}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                            <Receipt className="w-4 h-4 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold leading-tight">Payments CSV</p>
+                            <p className="text-xs text-slate-400">{payments.length} transactions · spreadsheet</p>
+                          </div>
+                        </button>
+
+                        <div className="h-px bg-slate-100 mx-2 my-1" />
+
+                        <button
+                          onClick={exportFullJSON}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <Download className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold leading-tight">Full Report JSON</p>
+                            <p className="text-xs text-slate-400">Summary + all data · developer</p>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </motion.div>

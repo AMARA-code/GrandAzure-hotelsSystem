@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { CalendarCheck, Plus, Download, Building2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CalendarCheck, Plus, Download, Building2, ChevronDown, FileText, Receipt } from 'lucide-react'
 import { PagePurposeAvatar } from '@/components/layout/PagePurposeAvatar'
 import Link from 'next/link'
 import { useBookings, type BookingFilters } from '@/lib/hooks/useBookings'
@@ -34,6 +34,7 @@ export default function BookingsPage() {
     date_from:    '',
     date_to:      '',
   })
+  const [exportOpen, setExportOpen] = useState(false)
 
   const { bookings, loading, total } = useBookings(filters)
 
@@ -44,8 +45,133 @@ export default function BookingsPage() {
     cancelled:   bookings.filter(b => b.booking_status === 'cancelled').length,
   }
 
+  // ── Export helpers ────────────────────────────────────────────────────────
+  const dateTag = new Date().toISOString().slice(0, 10)
+
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportCSV = () => {
+    const headers = [
+      'Booking ID', 'Guest Name', 'Email', 'Phone',
+      'Hotel', 'Room', 'Room Type',
+      'Check-In', 'Check-Out', 'Nights',
+      'Adults', 'Children',
+      'Channel', 'Status',
+      'Total Amount', 'Currency',
+      'Special Requests', 'Created At',
+    ]
+
+    const rows = bookings.map((b: any) => {
+      const checkIn  = b.check_in_date  ? new Date(b.check_in_date)  : null
+      const checkOut = b.check_out_date ? new Date(b.check_out_date) : null
+      const nights   = checkIn && checkOut
+        ? Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+        : ''
+
+      return [
+        b.booking_id          ?? '',
+        `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim(),
+        b.email               ?? '',
+        b.phone               ?? '',
+        b.hotel_name          ?? '',
+        b.room_number         ?? '',
+        b.room_type           ?? '',
+        b.check_in_date       ?? '',
+        b.check_out_date      ?? '',
+        nights,
+        b.adults              ?? '',
+        b.children            ?? '',
+        b.channel_type        ?? '',
+        b.booking_status      ?? '',
+        b.total_amount        ?? '',
+        b.currency_code       ?? 'PKR',
+        b.special_requests    ?? '',
+        b.created_at          ?? '',
+      ]
+    })
+
+    const csv = [headers, ...rows]
+      .map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+
+    triggerDownload(
+      new Blob([csv], { type: 'text/csv;charset=utf-8;' }),
+      `bookings_${dateTag}.csv`
+    )
+    setExportOpen(false)
+  }
+
+  const exportJSON = () => {
+    const data = {
+      exported_at: new Date().toISOString(),
+      filters: {
+        status:       filters.status,
+        hotel_id:     filters.hotel_id,
+        channel_type: filters.channel_type,
+        date_from:    filters.date_from,
+        date_to:      filters.date_to,
+        search:       filters.search,
+      },
+      summary: {
+        total:       bookings.length,
+        confirmed:   counts.confirmed,
+        checked_in:  counts.checked_in,
+        checked_out: counts.checked_out,
+        cancelled:   counts.cancelled,
+      },
+      bookings: bookings.map((b: any) => {
+        const checkIn  = b.check_in_date  ? new Date(b.check_in_date)  : null
+        const checkOut = b.check_out_date ? new Date(b.check_out_date) : null
+        const nights   = checkIn && checkOut
+          ? Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+          : null
+
+        return {
+          booking_id:       b.booking_id,
+          guest: {
+            name:  `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim(),
+            email: b.email ?? '',
+            phone: b.phone ?? '',
+          },
+          property: {
+            hotel:     b.hotel_name   ?? '',
+            room:      b.room_number  ?? '',
+            room_type: b.room_type    ?? '',
+          },
+          stay: {
+            check_in:  b.check_in_date  ?? null,
+            check_out: b.check_out_date ?? null,
+            nights,
+            adults:   b.adults   ?? null,
+            children: b.children ?? null,
+          },
+          booking: {
+            channel:          b.channel_type   ?? '',
+            status:           b.booking_status ?? '',
+            total_amount:     b.total_amount   ?? null,
+            currency:         b.currency_code  ?? 'PKR',
+            special_requests: b.special_requests ?? '',
+            created_at:       b.created_at ?? '',
+          },
+        }
+      }),
+    }
+
+    triggerDownload(
+      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      `bookings_${dateTag}.json`
+    )
+    setExportOpen(false)
+  }
+
   return (
-    // Outer shell — mirrors MaintenancePage exactly
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/80 overflow-x-hidden">
       <div className="w-full p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
 
@@ -71,14 +197,70 @@ export default function BookingsPage() {
 
           {/* Right — never wrap */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 bg-white text-slate-600 text-[11px] sm:text-xs font-medium hover:bg-slate-50 shadow-sm transition-all whitespace-nowrap"
-            >
-              <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Export</span>
-            </motion.button>
+
+            {/* Export Dropdown */}
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => setExportOpen(prev => !prev)}
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 bg-white text-slate-600 text-[11px] sm:text-xs font-medium hover:bg-slate-50 shadow-sm transition-all whitespace-nowrap"
+              >
+                <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="hidden sm:inline">Export</span>
+                <ChevronDown className={cn(
+                  'w-3 h-3 transition-transform duration-200 hidden sm:block',
+                  exportOpen && 'rotate-180'
+                )} />
+              </motion.button>
+
+              <AnimatePresence>
+                {exportOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-lg border border-slate-100 z-20 overflow-hidden"
+                    >
+                      <div className="p-2">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-2 pt-1 pb-2">
+                          Export {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
+                        </p>
+
+                        <button
+                          onClick={exportCSV}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm leading-tight">Export as CSV</p>
+                            <p className="text-xs text-slate-400">Spreadsheet compatible</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={exportJSON}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm leading-tight">Export as JSON</p>
+                            <p className="text-xs text-slate-400">With summary &amp; filters</p>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
             <Link href="/bookings/new">
               <motion.span

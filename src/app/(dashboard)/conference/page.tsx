@@ -7,7 +7,7 @@ import {
   ChevronDown, Search, Filter, RefreshCw, X, Plus,
   MapPin, DollarSign, CheckCircle2, Circle, Layers,
   LayoutGrid, List, TrendingUp, Star, ChevronRight,
-  Theater, Table2, Presentation,
+  Theater, Table2, Presentation, AlertCircle,
 } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils/cn";
@@ -52,6 +52,42 @@ interface ConferenceBooking {
   hotel_name: string;
 }
 
+interface NewBookingForm {
+  hall_id: string;
+  guest_id: string;
+  contact_name: string;
+  event_name: string;
+  event_type: string;
+  start_date: string;
+  start_time: string;
+  end_date: string;
+  end_time: string;
+  attendees: string;
+  setup_type: string;
+  status: string;
+  total_amount: string;
+  deposit_paid: string;
+  notes: string;
+}
+
+const EMPTY_FORM: NewBookingForm = {
+  hall_id: "",
+  guest_id: "",
+  contact_name: "",
+  event_name: "",
+  event_type: "conference",
+  start_date: "",
+  start_time: "09:00",
+  end_date: "",
+  end_time: "17:00",
+  attendees: "",
+  setup_type: "theatre",
+  status: "confirmed",
+  total_amount: "",
+  deposit_paid: "",
+  notes: "",
+};
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 const hotelColor = (name: string) =>
   name.includes("Karachi") ? "azure" : name.includes("Lahore") ? "emerald" : "violet";
@@ -82,6 +118,558 @@ const SETUP_ICONS: Record<string, React.ReactNode> = {
   banquet:   <Layers        className="w-3.5 h-3.5" />,
   classroom: <Presentation  className="w-3.5 h-3.5" />,
 };
+
+// ── Form Field ─────────────────────────────────────────────────────────────
+function Field({
+  label, required, children, error,
+}: { label: string; required?: boolean; children: React.ReactNode; error?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-slate-600">
+        {label}{required && <span className="text-rose-500 ml-0.5">*</span>}
+      </label>
+      {children}
+      {error && (
+        <p className="text-[10px] text-rose-500 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" /> {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-azure-200 focus:border-azure-300 transition-all placeholder:text-slate-300";
+
+// ── New Booking Modal ──────────────────────────────────────────────────────
+function NewBookingModal({
+  halls,
+  onClose,
+  onSuccess,
+}: {
+  halls: ConferenceHall[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState<NewBookingForm>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof NewBookingForm, string>>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const set = (key: keyof NewBookingForm, val: string) =>
+    setForm((f) => ({ ...f, [key]: val }));
+
+  // Auto-fill total amount based on hall rates when hall / dates change
+  useEffect(() => {
+    if (!form.hall_id || !form.start_date || !form.start_time || !form.end_date || !form.end_time) return;
+    const hall = halls.find((h) => h.hall_id === parseInt(form.hall_id));
+    if (!hall) return;
+    const start = new Date(`${form.start_date}T${form.start_time}`);
+    const end   = new Date(`${form.end_date}T${form.end_time}`);
+    const hours = differenceInHours(end, start);
+    if (hours <= 0) return;
+    const amount = hours >= 8
+      ? Number(hall.full_day_rate)
+      : hours * Number(hall.hourly_rate);
+    setForm((f) => ({
+      ...f,
+      total_amount: Math.round(amount).toString(),
+      deposit_paid: f.deposit_paid || Math.round(amount * 0.25).toString(),
+    }));
+  }, [form.hall_id, form.start_date, form.start_time, form.end_date, form.end_time]);
+
+  const validateStep1 = () => {
+    const e: typeof errors = {};
+    if (!form.hall_id)       e.hall_id = "Please select a hall";
+    if (!form.contact_name.trim()) e.contact_name = "Contact name is required";
+    if (!form.event_name.trim())   e.event_name = "Event name is required";
+    if (!form.guest_id.trim())     e.guest_id = "Guest ID is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const e: typeof errors = {};
+    if (!form.start_date) e.start_date = "Required";
+    if (!form.end_date)   e.end_date = "Required";
+    if (form.start_date && form.end_date) {
+      const start = new Date(`${form.start_date}T${form.start_time}`);
+      const end   = new Date(`${form.end_date}T${form.end_time}`);
+      if (end <= start) e.end_date = "End must be after start";
+    }
+    if (!form.attendees || parseInt(form.attendees) < 1) e.attendees = "Enter number of attendees";
+    if (!form.total_amount || Number(form.total_amount) <= 0) e.total_amount = "Enter total amount";
+    if (!form.deposit_paid) e.deposit_paid = "Enter deposit amount";
+    if (Number(form.deposit_paid) > Number(form.total_amount)) {
+      e.deposit_paid = "Deposit cannot exceed total";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep1()) setStep(2);
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep2()) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const start_datetime = `${form.start_date}T${form.start_time}:00`;
+      const end_datetime   = `${form.end_date}T${form.end_time}:00`;
+
+      const { error } = await supabase.from("conference_bookings").insert({
+        hall_id:        parseInt(form.hall_id),
+        guest_id:       parseInt(form.guest_id),
+        contact_name:   form.contact_name.trim(),
+        event_name:     form.event_name.trim(),
+        event_type:     form.event_type,
+        start_datetime,
+        end_datetime,
+        attendees:      parseInt(form.attendees),
+        setup_type:     form.setup_type,
+        status:         form.status,
+        total_amount:   parseFloat(form.total_amount),
+        deposit_paid:   parseFloat(form.deposit_paid),
+        notes:          form.notes.trim() || null,
+      });
+
+      if (error) throw error;
+      onSuccess();
+    } catch (err: any) {
+      setSubmitError(err?.message ?? "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const selectedHall = halls.find((h) => h.hall_id === parseInt(form.hall_id));
+
+  return (
+    <AnimatePresence>
+      {/* Backdrop */}
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50"
+      />
+
+      {/* Modal */}
+      <motion.div
+        key="modal"
+        initial={{ opacity: 0, scale: 0.96, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 20 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-xl max-h-[90vh] flex flex-col pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl gradient-azure flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-800 text-sm">New Conference Booking</h2>
+                <p className="text-[11px] text-slate-400">
+                  Step {step} of 2 — {step === 1 ? "Event Details" : "Schedule & Pricing"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+            >
+              <X className="w-3.5 h-3.5 text-slate-500" />
+            </button>
+          </div>
+
+          {/* Step indicator */}
+          <div className="flex gap-1 px-5 pt-4 shrink-0">
+            {[1, 2].map((s) => (
+              <div
+                key={s}
+                className={cn(
+                  "h-1 flex-1 rounded-full transition-all duration-500",
+                  s <= step ? "gradient-azure" : "bg-slate-100"
+                )}
+              />
+            ))}
+          </div>
+
+          {/* Body */}
+          <div className="overflow-y-auto flex-1 px-5 py-5">
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4"
+                >
+                  {/* Hall Selection */}
+                  <Field label="Conference Hall" required error={errors.hall_id}>
+                    <select
+                      value={form.hall_id}
+                      onChange={(e) => set("hall_id", e.target.value)}
+                      className={cn(inputCls, !form.hall_id && "text-slate-400")}
+                    >
+                      <option value="">Select a hall...</option>
+                      {halls.filter((h) => h.is_active).map((h) => (
+                        <option key={h.hall_id} value={h.hall_id}>
+                          {h.hall_name} — {hotelShort(h.hotel_name)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  {/* Hall preview */}
+                  {selectedHall && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="bg-azure-50 border border-azure-100 rounded-xl p-3 overflow-hidden"
+                    >
+                      <div className="flex flex-wrap gap-3 text-xs text-azure-700">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          Theatre: {selectedHall.capacity_theatre ?? "–"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3" />
+                          {formatPKR(selectedHall.hourly_rate)}/hr
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3" />
+                          {formatPKR(selectedHall.full_day_rate)}/day
+                        </span>
+                        {selectedHall.has_wifi && <span className="flex items-center gap-1"><Wifi className="w-3 h-3" /> WiFi</span>}
+                        {selectedHall.has_av   && <span className="flex items-center gap-1"><Monitor className="w-3 h-3" /> AV</span>}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Event Name" required error={errors.event_name}>
+                      <input
+                        type="text"
+                        value={form.event_name}
+                        onChange={(e) => set("event_name", e.target.value)}
+                        placeholder="Annual Summit 2025"
+                        className={inputCls}
+                      />
+                    </Field>
+                    <Field label="Event Type" required>
+                      <select
+                        value={form.event_type}
+                        onChange={(e) => set("event_type", e.target.value)}
+                        className={inputCls}
+                      >
+                        {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Contact Name" required error={errors.contact_name}>
+                      <input
+                        type="text"
+                        value={form.contact_name}
+                        onChange={(e) => set("contact_name", e.target.value)}
+                        placeholder="Ali Raza"
+                        className={inputCls}
+                      />
+                    </Field>
+                    <Field label="Guest ID" required error={errors.guest_id}>
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.guest_id}
+                        onChange={(e) => set("guest_id", e.target.value)}
+                        placeholder="e.g. 42"
+                        className={inputCls}
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Setup Type" required>
+                      <select
+                        value={form.setup_type}
+                        onChange={(e) => set("setup_type", e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="theatre">Theatre</option>
+                        <option value="boardroom">Boardroom</option>
+                        <option value="banquet">Banquet</option>
+                        <option value="classroom">Classroom</option>
+                      </select>
+                    </Field>
+                    <Field label="Status" required>
+                      <select
+                        value={form.status}
+                        onChange={(e) => set("status", e.target.value)}
+                        className={inputCls}
+                      >
+                        {Object.entries(STATUS_CONFIG).map(([v, c]) => (
+                          <option key={v} value={v}>{c.label}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4"
+                >
+                  {/* Dates & Times */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Start Date" required error={errors.start_date}>
+                      <input
+                        type="date"
+                        value={form.start_date}
+                        onChange={(e) => {
+                          set("start_date", e.target.value);
+                          if (!form.end_date) set("end_date", e.target.value);
+                        }}
+                        className={inputCls}
+                      />
+                    </Field>
+                    <Field label="Start Time" required>
+                      <input
+                        type="time"
+                        value={form.start_time}
+                        onChange={(e) => set("start_time", e.target.value)}
+                        className={inputCls}
+                      />
+                    </Field>
+                    <Field label="End Date" required error={errors.end_date}>
+                      <input
+                        type="date"
+                        value={form.end_date}
+                        min={form.start_date}
+                        onChange={(e) => set("end_date", e.target.value)}
+                        className={inputCls}
+                      />
+                    </Field>
+                    <Field label="End Time" required>
+                      <input
+                        type="time"
+                        value={form.end_time}
+                        onChange={(e) => set("end_time", e.target.value)}
+                        className={inputCls}
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Duration preview */}
+                  {form.start_date && form.end_date && form.start_time && form.end_time && (() => {
+                    const hours = differenceInHours(
+                      new Date(`${form.end_date}T${form.end_time}`),
+                      new Date(`${form.start_date}T${form.start_time}`)
+                    );
+                    return hours > 0 ? (
+                      <div className="flex items-center gap-2 text-xs text-azure-700 bg-azure-50 border border-azure-100 rounded-xl px-3 py-2">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        Duration: <strong>{hours}h</strong>
+                        {selectedHall && (
+                          <span className="ml-auto text-azure-500">
+                            Auto-priced: {formatPKR(
+                              hours >= 8
+                                ? selectedHall.full_day_rate
+                                : hours * Number(selectedHall.hourly_rate)
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+
+                  <Field label="Number of Attendees" required error={errors.attendees}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.attendees}
+                      onChange={(e) => set("attendees", e.target.value)}
+                      placeholder="e.g. 150"
+                      className={inputCls}
+                    />
+                  </Field>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Total Amount (PKR)" required error={errors.total_amount}>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.total_amount}
+                        onChange={(e) => set("total_amount", e.target.value)}
+                        placeholder="e.g. 120000"
+                        className={inputCls}
+                      />
+                    </Field>
+                    <Field label="Deposit Paid (PKR)" required error={errors.deposit_paid}>
+                      <input
+                        type="number"
+                        min="0"
+                        max={form.total_amount || undefined}
+                        value={form.deposit_paid}
+                        onChange={(e) => set("deposit_paid", e.target.value)}
+                        placeholder="e.g. 30000"
+                        className={inputCls}
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Deposit progress */}
+                  {form.total_amount && form.deposit_paid && Number(form.total_amount) > 0 && (
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                        <span>Deposit Coverage</span>
+                        <span className="font-bold text-emerald-600">
+                          {Math.min(100, Math.round((Number(form.deposit_paid) / Number(form.total_amount)) * 100))}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <motion.div
+                          animate={{
+                            width: `${Math.min(100, (Number(form.deposit_paid) / Number(form.total_amount)) * 100)}%`
+                          }}
+                          className="h-full bg-emerald-500 rounded-full"
+                          transition={{ duration: 0.4 }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <Field label="Notes (optional)">
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => set("notes", e.target.value)}
+                      placeholder="Any special requirements, dietary notes, AV setup preferences..."
+                      rows={3}
+                      className={cn(inputCls, "resize-none")}
+                    />
+                  </Field>
+
+                  {submitError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-xl p-3"
+                    >
+                      <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <p className="text-xs text-rose-600">{submitError}</p>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100 shrink-0 gap-3">
+            {step === 2 ? (
+              <button
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-all font-medium"
+              >
+                ← Back
+              </button>
+            ) : (
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-all font-medium"
+              >
+                Cancel
+              </button>
+            )}
+
+            {step === 1 ? (
+              <button
+                onClick={handleNext}
+                className="flex items-center gap-2 gradient-azure text-white px-5 py-2.5 rounded-xl font-medium text-sm shadow-azure hover:shadow-azure-lg transition-all"
+              >
+                Continue →
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className={cn(
+                  "flex items-center gap-2 gradient-azure text-white px-5 py-2.5 rounded-xl font-medium text-sm shadow-azure transition-all",
+                  submitting ? "opacity-70 cursor-not-allowed" : "hover:shadow-azure-lg"
+                )}
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Create Booking
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ── Success Toast ──────────────────────────────────────────────────────────
+function SuccessToast({ onDismiss }: { onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 4000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 60, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 60, scale: 0.9 }}
+      className="fixed bottom-6 right-6 z-[60] bg-white border border-emerald-200 rounded-2xl shadow-2xl px-4 py-3.5 flex items-center gap-3 max-w-xs"
+    >
+      <div className="w-8 h-8 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
+        <CheckCircle2 className="w-4 h-4 text-white" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-800">Booking Created!</p>
+        <p className="text-xs text-slate-400">The event has been scheduled.</p>
+      </div>
+      <button onClick={onDismiss} className="ml-auto text-slate-300 hover:text-slate-500">
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </motion.div>
+  );
+}
 
 // ── HallCard ───────────────────────────────────────────────────────────────
 function HallCard({
@@ -129,11 +717,8 @@ function HallCard({
         selected ? "border-azure-300 ring-2 ring-azure-200" : "border-slate-100"
       )}
     >
-      {/* Accent */}
       <div className={cn("h-[3px] w-full", accentBar)} />
-
       <div className="p-4 sm:p-5">
-        {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-slate-800 text-base sm:text-lg leading-tight truncate">
@@ -158,7 +743,6 @@ function HallCard({
           </div>
         </div>
 
-        {/* Capacity pills */}
         <div className="flex flex-wrap gap-2 mb-4">
           {capacities.map((c) => (
             <div key={c.label} className="flex items-center gap-1.5 bg-slate-50 rounded-xl px-3 py-1.5">
@@ -169,7 +753,6 @@ function HallCard({
           ))}
         </div>
 
-        {/* Area + Amenities */}
         <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-slate-500">
           <div className="flex items-center gap-1">
             <LayoutGrid className="w-3.5 h-3.5 text-slate-400" />
@@ -187,7 +770,6 @@ function HallCard({
           )}
         </div>
 
-        {/* Pricing */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-slate-50 rounded-xl p-3">
             <p className="text-[10px] text-slate-400 mb-0.5">Hourly Rate</p>
@@ -199,7 +781,6 @@ function HallCard({
           </div>
         </div>
 
-        {/* Footer stats */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-50 text-xs">
           <span className="text-slate-400">
             <span className="font-semibold text-slate-600">{hallBookings.length}</span> booking{hallBookings.length !== 1 ? "s" : ""}
@@ -233,12 +814,10 @@ function BookingRow({ booking, index }: { booking: ConferenceBooking; index: num
       transition={{ delay: index * 0.05 }}
       className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden"
     >
-      {/* Main row */}
       <div
         className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 sm:p-5 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
-        {/* Event info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h4 className="font-semibold text-slate-800 text-sm truncate">{booking.event_name}</h4>
@@ -258,7 +837,6 @@ function BookingRow({ booking, index }: { booking: ConferenceBooking; index: num
           </div>
         </div>
 
-        {/* Meta */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-6 shrink-0">
           <div className="text-xs">
             <p className="text-slate-400 mb-0.5">Date</p>
@@ -280,7 +858,6 @@ function BookingRow({ booking, index }: { booking: ConferenceBooking; index: num
         </div>
       </div>
 
-      {/* Expanded details */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -357,10 +934,14 @@ export default function ConferencePage() {
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState<"halls" | "bookings">("halls");
   const [search, setSearch]       = useState("");
-  const [hotelFilter, setHotelFilter] = useState("all");
+  const [hotelFilter, setHotelFilter]   = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedHall, setSelectedHall] = useState<ConferenceHall | null>(null);
   const [showFilters, setShowFilters]   = useState(false);
+
+  // Modal state
+  const [showNewBooking, setShowNewBooking] = useState(false);
+  const [showSuccess, setShowSuccess]       = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -398,10 +979,17 @@ export default function ConferencePage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const handleBookingSuccess = () => {
+    setShowNewBooking(false);
+    setShowSuccess(true);
+    fetchData();           // refresh list
+    setActiveTab("bookings"); // jump to bookings tab
+  };
+
   // ── Derived ──
-  const totalRevenue  = bookings.reduce((s, b) => s + Number(b.total_amount), 0);
-  const totalDeposit  = bookings.reduce((s, b) => s + Number(b.deposit_paid), 0);
-  const totalCapacity = halls.reduce((s, h) => s + (h.capacity_theatre ?? h.capacity_banquet ?? 0), 0);
+  const totalRevenue   = bookings.reduce((s, b) => s + Number(b.total_amount), 0);
+  const totalDeposit   = bookings.reduce((s, b) => s + Number(b.deposit_paid), 0);
+  const totalCapacity  = halls.reduce((s, h) => s + (h.capacity_theatre ?? h.capacity_banquet ?? 0), 0);
   const confirmedCount = bookings.filter((b) => b.status === "confirmed").length;
 
   const filteredHalls = halls.filter((h) => {
@@ -447,7 +1035,11 @@ export default function ConferencePage() {
               </p>
             </div>
           </div>
-          <button className="flex items-center gap-2 gradient-azure text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-azure hover:shadow-azure-lg transition-all self-start xs:self-auto shrink-0">
+          {/* ← Now opens the modal */}
+          <button
+            onClick={() => setShowNewBooking(true)}
+            className="flex items-center gap-2 gradient-azure text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-azure hover:shadow-azure-lg transition-all self-start xs:self-auto shrink-0"
+          >
             <Plus className="w-4 h-4" />
             <span>New Booking</span>
           </button>
@@ -609,7 +1201,6 @@ export default function ConferencePage() {
         ) : (
           <AnimatePresence mode="wait">
 
-            {/* HALLS TAB */}
             {activeTab === "halls" && (
               <motion.div
                 key="halls"
@@ -637,7 +1228,6 @@ export default function ConferencePage() {
                   </div>
                 )}
 
-                {/* Hall detail panel */}
                 <AnimatePresence>
                   {selectedHall && (
                     <motion.div
@@ -674,7 +1264,6 @@ export default function ConferencePage() {
               </motion.div>
             )}
 
-            {/* BOOKINGS TAB */}
             {activeTab === "bookings" && (
               <motion.div
                 key="bookings"
@@ -700,6 +1289,22 @@ export default function ConferencePage() {
         )}
 
       </div>
+
+      {/* NEW BOOKING MODAL */}
+      <AnimatePresence>
+        {showNewBooking && (
+          <NewBookingModal
+            halls={halls}
+            onClose={() => setShowNewBooking(false)}
+            onSuccess={handleBookingSuccess}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* SUCCESS TOAST */}
+      <AnimatePresence>
+        {showSuccess && <SuccessToast onDismiss={() => setShowSuccess(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
