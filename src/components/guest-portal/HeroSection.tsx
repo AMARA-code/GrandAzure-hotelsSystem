@@ -9,7 +9,6 @@ import {
   Gem,
   Clock3,
   ConciergeBell,
-  ArrowRight,
   Star,
 } from 'lucide-react'
 import Image from 'next/image'
@@ -96,10 +95,6 @@ export default function HeroSection() {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        @keyframes pulseOpacity {
-          0%, 100% { opacity: 0.5; }
-          50%       { opacity: 1; }
-        }
         @keyframes particleDrift {
           0%   { transform: translateY(0) scale(1);   opacity: 0; }
           10%  { opacity: 0.7; }
@@ -119,11 +114,10 @@ export default function HeroSection() {
         .particle-drift { animation: particleDrift ease-in-out infinite; }
       `}</style>
 
-      {/* Background: warm light base matching restaurant hero */}
-      <div className="relative overflow-hidden rounded-3xl border border-[#e8d5b7] bg-[#FFF8F2] shadow-[0_8px_60px_rgba(180,120,30,0.12)]">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-[#e8d5b7] bg-[#FFF8F2] shadow-[0_8px_60px_rgba(180,120,30,0.12)]">
 
+        {/* ── Background decorations ── */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          {/* Warm light ambient glows */}
           <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#f7e4c0]/50 blur-[80px]" />
           <div className="absolute -right-16 top-10 h-80 w-80 rounded-full bg-[#fde8d0]/40 blur-[60px]" />
           <div className="absolute bottom-0 left-1/2 h-48 w-[600px] -translate-x-1/2 rounded-full bg-[#fdf0dc]/60 blur-[50px]" />
@@ -137,17 +131,18 @@ export default function HeroSection() {
             <rect width="100%" height="100%" fill="url(#grid)" />
           </svg>
 
-          <svg className="absolute left-4 top-4 h-16 w-16 opacity-20" viewBox="0 0 64 64" fill="none">
+          {/* Corner ornaments — hidden on very small screens */}
+          <svg className="absolute left-4 top-4 h-12 w-12 sm:h-16 sm:w-16 opacity-20" viewBox="0 0 64 64" fill="none">
             <path d="M4 4 L4 32 Q4 4 32 4 Z" stroke="#D4722A" strokeWidth="1.2" />
             <path d="M10 10 L10 26 Q10 10 26 10 Z" stroke="#D4722A" strokeWidth="0.6" />
             <circle cx="4" cy="4" r="2.5" fill="#D4722A" />
           </svg>
-          <svg className="absolute right-4 top-4 h-16 w-16 -scale-x-100 opacity-20" viewBox="0 0 64 64" fill="none">
+          <svg className="absolute right-4 top-4 h-12 w-12 sm:h-16 sm:w-16 -scale-x-100 opacity-20" viewBox="0 0 64 64" fill="none">
             <path d="M4 4 L4 32 Q4 4 32 4 Z" stroke="#D4722A" strokeWidth="1.2" />
             <path d="M10 10 L10 26 Q10 10 26 10 Z" stroke="#D4722A" strokeWidth="0.6" />
             <circle cx="4" cy="4" r="2.5" fill="#D4722A" />
           </svg>
-          <svg className="absolute bottom-4 left-4 h-16 w-16 -scale-y-100 opacity-20" viewBox="0 0 64 64" fill="none">
+          <svg className="absolute bottom-4 left-4 h-12 w-12 sm:h-16 sm:w-16 -scale-y-100 opacity-20" viewBox="0 0 64 64" fill="none">
             <path d="M4 4 L4 32 Q4 4 32 4 Z" stroke="#D4722A" strokeWidth="1.2" />
             <circle cx="4" cy="4" r="2.5" fill="#D4722A" />
           </svg>
@@ -168,39 +163,51 @@ export default function HeroSection() {
           ))}
         </div>
 
-        <div className="relative z-10 grid min-h-[520px] lg:grid-cols-[1.2fr_0.8fr]">
+        {/* ── Main grid: stacks on mobile, side-by-side on lg ── */}
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr]">
 
+          {/* ══ LEFT / TOP PANEL ══ */}
           <motion.div
-            className="flex flex-col justify-between p-8 sm:p-10 lg:p-12"
+            className="flex flex-col justify-between p-6 sm:p-8 lg:p-12"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
+
+              {/* Badge */}
               <motion.div variants={fadeUp} className="flex items-center gap-2.5">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#e0be85] bg-gradient-to-r from-[#fdf3e2] to-[#fff8ee] px-4 py-1.5 shadow-sm">
-                  <Sparkles className="h-3.5 w-3.5 text-[#D4722A]" />
-                  <span className="text-[9px] font-bold uppercase tracking-[0.26em] text-[#a0640e]">
+                <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-[#e0be85] bg-gradient-to-r from-[#fdf3e2] to-[#fff8ee] px-3 py-1.5 sm:px-4 shadow-sm">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#D4722A]" />
+                  <span className="text-[9px] font-bold uppercase tracking-[0.22em] sm:tracking-[0.26em] text-[#a0640e]">
                     Reservation Atelier
                   </span>
-                  <span className="h-3 w-px bg-[#D4722A]" />
-                  <span className="flex items-center gap-1 text-[9px] font-semibold text-[#D4722A]">
+                  <span className="hidden xs:block h-3 w-px bg-[#D4722A]" />
+                  <span className="hidden xs:flex items-center gap-1 text-[9px] font-semibold text-[#D4722A]">
                     <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                     Rooms Available
                   </span>
                 </div>
               </motion.div>
 
+              {/* Headline */}
               <motion.div variants={fadeUp}>
-                <h1 className="font-display leading-[1.05] tracking-tight text-[#2c1a08]" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 400 }}>
+                <h1
+                  className="font-display leading-[1.05] tracking-tight text-[#2c1a08]"
+                  style={{ fontSize: 'clamp(1.75rem, 5vw, 3.4rem)', fontWeight: 400 }}
+                >
                   Curate Your
                   <br />
-                  <span className="gold-shimmer-text font-display italic" style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', fontWeight: 400 }}>
+                  <span
+                    className="gold-shimmer-text font-display italic"
+                    style={{ fontSize: 'clamp(1.75rem, 5vw, 3.4rem)', fontWeight: 400 }}
+                  >
                     Perfect Stay
                   </span>
                 </h1>
               </motion.div>
 
+              {/* Divider */}
               <motion.div
                 variants={{
                   hidden:  { scaleX: 0, opacity: 0 },
@@ -215,51 +222,63 @@ export default function HeroSection() {
                 </div>
               </motion.div>
 
-              <motion.p variants={fadeUp} className="max-w-md text-[#7b5c38]" style={{ fontSize: 'clamp(0.8rem, 1.4vw, 0.88rem)', lineHeight: 1.9, fontWeight: 400, letterSpacing: '0.01em' }}>
+              {/* Body copy */}
+              <motion.p
+                variants={fadeUp}
+                className="max-w-md text-[#7b5c38]"
+                style={{ fontSize: 'clamp(0.78rem, 1.4vw, 0.88rem)', lineHeight: 1.9, fontWeight: 400, letterSpacing: '0.01em' }}
+              >
                 Handpicked rooms, dynamic seasonal privileges, and seamless confirmation — crafted for the discerning traveller who expects nothing less than extraordinary.
               </motion.p>
-
-      
             </div>
 
+            {/* ── Stats cards ── */}
             <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="mt-8 grid grid-cols-3 gap-3"
+              className="mt-7 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-3"
             >
               {[
-                { icon: CalendarCheck2, label: 'Confirmation', value: 'Instant',   sub: 'Real-Time'   },
-                { icon: ShieldCheck,    label: 'Checkout',     value: 'Secured',   sub: 'End-to-End'  },
+                { icon: CalendarCheck2, label: 'Confirmation', value: 'Instant',   sub: 'Real-Time'    },
+                { icon: ShieldCheck,    label: 'Checkout',     value: 'Secured',   sub: 'End-to-End'   },
                 { icon: Gem,            label: 'Benefits',     value: 'Exclusive', sub: 'Direct Perks' },
               ].map((item) => (
                 <motion.div
                   key={item.label}
                   variants={fadeUp}
                   whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                  className="group rounded-2xl border border-[#e8d2ae] bg-white/70 px-4 py-3.5 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-[0_4px_20px_rgba(212,114,42,0.15)]"
+                  className="group rounded-xl sm:rounded-2xl border border-[#e8d2ae] bg-white/70 px-2.5 py-3 sm:px-4 sm:py-3.5 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-[0_4px_20px_rgba(212,114,42,0.15)]"
                 >
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#a06828]">
-                    <item.icon className="h-3 w-3 text-[#D4722A]" />
-                    {item.label}
+                  {/* Label row */}
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.16em] text-[#a06828]">
+                    <item.icon className="h-3 w-3 shrink-0 text-[#D4722A]" />
+                    {/* Truncate label on very small screens */}
+                    <span className="truncate">{item.label}</span>
                   </div>
-                  <p className="mt-2 text-lg font-bold text-[#2c1a08]">{item.value}</p>
-                  <p className="text-[11px] text-[#b89060]">{item.sub}</p>
+                  {/* Value */}
+                  <p className="mt-1.5 sm:mt-2 text-sm sm:text-lg font-bold text-[#2c1a08] leading-tight">
+                    {item.value}
+                  </p>
+                  {/* Sub — hide on xs if too cramped */}
+                  <p className="hidden xs:block text-[10px] sm:text-[11px] text-[#b89060]">{item.sub}</p>
                 </motion.div>
               ))}
             </motion.div>
           </motion.div>
 
-          {/* ── RIGHT PANEL — Image with light warm gradients (restaurant-style) ── */}
+          {/* ══ RIGHT / BOTTOM PANEL ══ */}
           <motion.div
             variants={fadeLeft}
             initial="hidden"
             animate="visible"
             className="relative flex flex-col border-t border-[#e8d5b7] lg:border-l lg:border-t-0"
           >
+            {/* Image area */}
             <div className="relative flex-1 overflow-hidden bg-[#FFF8F2]">
               <TiltCard>
-                <div className="relative h-full min-h-[300px] w-full">
+                {/* Fixed height on mobile so image is visible; flex-1 takes over on lg */}
+                <div className="relative h-56 xs:h-64 sm:h-72 lg:h-full min-h-0 lg:min-h-[300px] w-full">
                   <Image
                     src="/images/hero-room.jpg"
                     alt="Luxury suite interior"
@@ -268,25 +287,19 @@ export default function HeroSection() {
                     priority
                   />
 
-                  {/* ── Light warm overlay layers matching restaurant hero ── */}
-
-                  {/* Left-to-right warm fade: strong on left, partial on right */}
+                  {/* Overlay layers */}
                   <div
                     className="absolute inset-0"
                     style={{
                       background: 'linear-gradient(to right, rgba(255,248,242,0.82) 0%, rgba(255,248,242,0.48) 38%, rgba(255,248,242,0.18) 65%, rgba(255,248,242,0.32) 100%)',
                     }}
                   />
-
-                  {/* Bottom fade to warm white */}
                   <div
                     className="absolute inset-0"
                     style={{
                       background: 'linear-gradient(to top, rgba(255,248,242,0.96) 0%, rgba(255,248,242,0.28) 20%, transparent 42%)',
                     }}
                   />
-
-                  {/* Top vignette */}
                   <div
                     className="absolute inset-0"
                     style={{
@@ -299,11 +312,11 @@ export default function HeroSection() {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.9, duration: 0.5, type: 'spring' }}
-                    className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-[#e0be85]/60 bg-white/80 px-3 py-1.5 shadow-lg backdrop-blur-sm"
+                    className="absolute right-3 top-3 sm:right-4 sm:top-4 flex items-center gap-1.5 rounded-full border border-[#e0be85]/60 bg-white/80 px-2.5 py-1 sm:px-3 sm:py-1.5 shadow-lg backdrop-blur-sm"
                   >
-                    <Star className="h-3.5 w-3.5 fill-[#D4722A] text-[#D4722A]" />
-                    <span className="text-xs font-bold text-[#2c1a08]">4.9</span>
-                    <span className="text-[10px] text-[#a06828]">/ 5.0</span>
+                    <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-[#D4722A] text-[#D4722A]" />
+                    <span className="text-[11px] sm:text-xs font-bold text-[#2c1a08]">4.9</span>
+                    <span className="text-[9px] sm:text-[10px] text-[#a06828]">/ 5.0</span>
                   </motion.div>
 
                   {/* Thumbnail strip */}
@@ -311,18 +324,30 @@ export default function HeroSection() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 1.1, duration: 0.6 }}
-                    className="absolute bottom-4 left-4 flex gap-2"
+                    className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-1.5 sm:gap-2"
                   >
-                    <div className="float-image h-14 w-14 overflow-hidden rounded-xl border-2 border-white/80 shadow-lg" style={{ animationDelay: '0s' }}>
-                      <Image src="/images/hero-room-thumb-1.jpg" alt="Suite detail" width={56} height={56} className="h-full w-full object-cover" />
-                    </div>
-                    <div className="float-image h-14 w-14 overflow-hidden rounded-xl border-2 border-white/80 shadow-lg" style={{ animationDelay: '0.4s' }}>
-                      <Image src="/images/hero-room-thumb-2.jpg" alt="Room accent" width={56} height={56} className="h-full w-full object-cover" />
-                    </div>
+                    {[
+                      { src: '/images/hero-room-thumb-1.jpg', alt: 'Suite detail', delay: '0s' },
+                      { src: '/images/hero-room-thumb-2.jpg', alt: 'Room accent',  delay: '0.4s' },
+                    ].map((thumb) => (
+                      <div
+                        key={thumb.alt}
+                        className="float-image h-11 w-11 sm:h-14 sm:w-14 overflow-hidden rounded-lg sm:rounded-xl border-2 border-white/80 shadow-lg"
+                        style={{ animationDelay: thumb.delay }}
+                      >
+                        <Image
+                          src={thumb.src}
+                          alt={thumb.alt}
+                          width={56}
+                          height={56}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ))}
                   </motion.div>
 
                   {/* Spinning ornament */}
-                  <div className="absolute right-4 bottom-20 h-10 w-10 spin-slow opacity-25">
+                  <div className="absolute right-3 bottom-16 sm:right-4 sm:bottom-20 h-8 w-8 sm:h-10 sm:w-10 spin-slow opacity-25">
                     <svg viewBox="0 0 40 40" fill="none">
                       <circle cx="20" cy="20" r="18" stroke="#D4722A" strokeWidth="0.8" strokeDasharray="4 3" />
                       <circle cx="20" cy="20" r="3" fill="#D4722A" />
@@ -336,12 +361,14 @@ export default function HeroSection() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.3, duration: 0.5 }}
-                className="float-image absolute bottom-6 left-1/2 z-20 -translate-x-1/2"
+                className="float-image absolute bottom-4 sm:bottom-6 left-1/2 z-20 -translate-x-1/2 w-max"
                 style={{ animationDelay: '1s', animationDuration: '4s' }}
               >
-                <div className="flex items-center gap-2 rounded-full border border-[#e0be85]/70 bg-white/90 px-4 py-2 shadow-[0_4px_20px_rgba(212,114,42,0.2)] backdrop-blur-sm">
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                  <span className="text-xs font-semibold text-[#2c1a08]">Suites available tonight</span>
+                <div className="flex items-center gap-2 rounded-full border border-[#e0be85]/70 bg-white/90 px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_4px_20px_rgba(212,114,42,0.2)] backdrop-blur-sm">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-[#2c1a08] whitespace-nowrap">
+                    Suites available tonight
+                  </span>
                 </div>
               </motion.div>
             </div>
@@ -351,12 +378,14 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6 }}
-              className="border-t border-[#e8d5b7] bg-gradient-to-br from-[#fffaf4] to-[#fff4e2] p-6"
+              className="border-t border-[#e8d5b7] bg-gradient-to-br from-[#fffaf4] to-[#fff4e2] p-4 sm:p-6"
             >
-              <h2 className="mb-3 text-[9px] font-bold uppercase tracking-[0.22em] text-[#a06828]">
+              <h2 className="mb-2.5 sm:mb-3 text-[9px] font-bold uppercase tracking-[0.22em] text-[#a06828]">
                 Guest Privileges
               </h2>
-              <div className="space-y-2.5">
+
+              {/* On mobile: 2-col grid so both items sit side-by-side; on sm+ revert to stacked */}
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-2.5">
                 {[
                   { icon: ConciergeBell, text: 'Concierge follow-up after booking'  },
                   { icon: Clock3,        text: 'Priority check-in queue on arrival' },
@@ -364,17 +393,18 @@ export default function HeroSection() {
                   <motion.div
                     key={item.text}
                     whileHover={{ x: 3 }}
-                    className="flex items-center gap-3 rounded-xl border border-[#ead8b8] bg-white/60 px-3.5 py-3 text-sm text-[#5c3d1e] shadow-sm transition-colors hover:bg-white/90"
+                    className="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-[#ead8b8] bg-white/60 px-3 py-2.5 sm:px-3.5 sm:py-3 text-xs sm:text-sm text-[#5c3d1e] shadow-sm transition-colors hover:bg-white/90"
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#e0be85] bg-gradient-to-br from-[#fff3dc] to-[#fde8c0]">
-                      <item.icon className="h-3.5 w-3.5 text-[#D4722A]" />
+                    <span className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg border border-[#e0be85] bg-gradient-to-br from-[#fff3dc] to-[#fde8c0]">
+                      <item.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#D4722A]" />
                     </span>
-                    {item.text}
+                    <span className="leading-snug">{item.text}</span>
                   </motion.div>
                 ))}
               </div>
             </motion.div>
           </motion.div>
+
         </div>
       </div>
     </>
