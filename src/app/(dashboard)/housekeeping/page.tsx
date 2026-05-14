@@ -207,8 +207,9 @@ export default function HousekeepingPage() {
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6"
         >
+          {/* Title row */}
           <div className="flex items-center gap-3">
             <PagePurposeAvatar variant="housekeeping" size={44} className="shadow-lg shadow-emerald-200/60" />
             <div>
@@ -219,7 +220,8 @@ export default function HousekeepingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Actions row — full width on mobile */}
+          <div className="flex items-center gap-2 sm:flex-shrink-0">
             <button
               onClick={fetchData}
               className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
@@ -230,7 +232,7 @@ export default function HousekeepingPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 gradient-azure text-white text-sm font-semibold rounded-xl shadow-azure hover:shadow-lg transition-all"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 gradient-azure text-white text-sm font-semibold rounded-xl shadow-azure hover:shadow-lg transition-all"
             >
               <Plus className="w-4 h-4" />
               Add Schedule

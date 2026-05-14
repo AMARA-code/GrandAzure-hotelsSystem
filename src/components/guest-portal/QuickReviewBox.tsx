@@ -44,15 +44,20 @@ export default function QuickReviewBox({ hotels }: { hotels: HotelOption[] }) {
         .limit(1)
         .maybeSingle()
 
+      // Multiply star rating × 2 before saving:
+      // Guest picks 1–5 stars → stored as 2–10 in DB
+      // This keeps the admin panel's /10 scale correct.
+      const dbRating = rating * 2
+
       const { error } = await supabase.from('reviews').insert({
         hotel_id:           Number(hotelId),
         guest_id:           guest.guest_id,
         booking_id:         booking?.booking_id ?? null,
-        overall_rating:     rating,
-        cleanliness_rating: rating,
-        service_rating:     rating,
-        location_rating:    rating,
-        value_rating:       rating,
+        overall_rating:     dbRating,
+        cleanliness_rating: dbRating,
+        service_rating:     dbRating,
+        location_rating:    dbRating,
+        value_rating:       dbRating,
         title:              text.trim().slice(0, 80),
         review_text:        text.trim(),
         platform:           'direct',

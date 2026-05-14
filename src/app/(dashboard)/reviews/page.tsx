@@ -17,7 +17,7 @@ interface Review {
   review_id: number;
   hotel_id: number;
   guest_id: number;
-  overall_rating: number;
+  overall_rating: number;       // stored as 1–10 in DB (guest rates 1–5 stars, multiplied by 2)
   cleanliness_rating: number;
   service_rating: number;
   location_rating: number;
@@ -36,16 +36,16 @@ interface Review {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-const hotelColor = (name: string) =>
+const hotelColor = (name: string): "azure" | "emerald" | "violet" =>
   name.includes("Karachi") ? "azure" : name.includes("Lahore") ? "emerald" : "violet";
 
-const hotelShort = (name: string) =>
+const hotelShort = (name: string): string =>
   name.includes("Karachi") ? "Karachi" : name.includes("Lahore") ? "Lahore" : "Islamabad";
 
-const toFiveStarInt = (r: number) => Math.round((r / 10) * 5);
-
-const getSentiment = (r: number) =>
-  r >= 9 ? "positive" : r >= 7 ? "neutral" : "negative";
+// Ratings are stored as 1–10 (guest picks 1–5 stars → saved as stars × 2).
+// 8–10 = Positive, 6–7 = Neutral, 1–5 = Negative
+const getSentiment = (r: number): "positive" | "neutral" | "negative" =>
+  r >= 8 ? "positive" : r >= 6 ? "neutral" : "negative";
 
 const PLATFORM_LABEL: Record<string, string> = {
   direct: "Direct", google: "Google", tripadvisor: "TripAdvisor",
@@ -53,20 +53,29 @@ const PLATFORM_LABEL: Record<string, string> = {
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
-  direct: "bg-amber-50 text-amber-700 border-amber-200",
-  google: "bg-blue-50 text-blue-700 border-blue-200",
-  tripadvisor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  booking_com: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  expedia: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  direct:       "bg-amber-50 text-amber-700 border-amber-200",
+  google:       "bg-blue-50 text-blue-700 border-blue-200",
+  tripadvisor:  "bg-emerald-50 text-emerald-700 border-emerald-200",
+  booking_com:  "bg-indigo-50 text-indigo-700 border-indigo-200",
+  expedia:      "bg-yellow-50 text-yellow-700 border-yellow-200",
 };
 
 // ── StarRating ─────────────────────────────────────────────────────────────
+// Accepts a 1–10 DB value, maps it to 1–5 stars for display (÷ 2)
 function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
   const sz = size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
+  // Convert 1–10 scale → 1–5 stars
+  const starValue = Math.round(rating / 2);
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((s) => (
-        <Star key={s} className={cn(sz, s <= rating ? "text-gold-500 fill-gold-500" : "text-slate-200 fill-slate-200")} />
+        <Star
+          key={s}
+          className={cn(sz, s <= starValue
+            ? "text-gold-500 fill-gold-500"
+            : "text-slate-200 fill-slate-200"
+          )}
+        />
       ))}
     </div>
   );
@@ -74,61 +83,68 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
 
 // ── RatingBar ──────────────────────────────────────────────────────────────
 function RatingBar({ label, value }: { label: string; value: number }) {
+  // value is 1–10; scale bar to percentage out of 10
+  const pct = (value / 10) * 100;
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-slate-400 w-20 shrink-0">{label}</span>
       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${(value / 10) * 100}%` }}
+          animate={{ width: `${pct}%` }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="h-full rounded-full bg-gradient-to-r from-azure-400 to-azure-600"
         />
       </div>
-      <span className="text-xs font-semibold text-slate-700 w-5 shrink-0 text-right">{value}</span>
+      {/* Show the raw value out of 10 */}
+      <span className="text-xs font-semibold text-slate-700 w-8 shrink-0 text-right">{value}/10</span>
     </div>
   );
 }
 
 // ── ReviewCard ─────────────────────────────────────────────────────────────
 function ReviewCard({
-  review, index, onReplySubmit,
+  review,
+  index,
+  onReplySubmit,
 }: {
   review: Review;
   index: number;
   onReplySubmit: (id: number, text: string) => Promise<void>;
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [replyText, setReplyText]           = useState("");
+  const [submitting, setSubmitting]         = useState(false);
+  const [expanded, setExpanded]             = useState(false);
 
-  const color = hotelColor(review.hotel_name);
+  const color     = hotelColor(review.hotel_name);
   const sentiment = getSentiment(review.overall_rating);
-  const initials = `${review.first_name[0]}${review.last_name[0]}`;
-  const stars = toFiveStarInt(review.overall_rating);
-  const isLong = review.review_text.length > 110;
+  const initials  = `${review.first_name[0]}${review.last_name[0]}`;
+  const isLong    = review.review_text.length > 110;
 
   const avatarGrad =
-    color === "azure" ? "from-azure-400 to-azure-600"
+    color === "azure"   ? "from-azure-400 to-azure-600"
     : color === "emerald" ? "from-emerald-400 to-emerald-600"
     : "from-violet-400 to-violet-600";
 
   const hotelBadgeCls =
-    color === "azure" ? "bg-azure-50 text-azure-700 border-azure-200"
+    color === "azure"   ? "bg-azure-50 text-azure-700 border-azure-200"
     : color === "emerald" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : "bg-violet-50 text-violet-700 border-violet-200";
 
   const accentBar =
-    color === "azure" ? "gradient-azure"
+    color === "azure"   ? "gradient-azure"
     : color === "emerald" ? "bg-gradient-to-r from-emerald-400 to-emerald-600"
     : "bg-gradient-to-r from-violet-400 to-violet-600";
 
-  const sentimentConfig = {
+  const sentimentConfig: Record<
+    "positive" | "neutral" | "negative",
+    { icon: React.ReactNode; cls: string }
+  > = {
     positive: { icon: <Smile className="w-3.5 h-3.5" />, cls: "text-emerald-600 bg-emerald-50 border border-emerald-100" },
-    neutral:  { icon: <Meh  className="w-3.5 h-3.5" />, cls: "text-amber-600  bg-amber-50  border border-amber-100"  },
-    negative: { icon: <Frown className="w-3.5 h-3.5"/>, cls: "text-rose-600   bg-rose-50   border border-rose-100"   },
-  }[sentiment];
+    neutral:  { icon: <Meh   className="w-3.5 h-3.5" />, cls: "text-amber-600  bg-amber-50  border border-amber-100"  },
+    negative: { icon: <Frown className="w-3.5 h-3.5" />, cls: "text-rose-600   bg-rose-50   border border-rose-100"   },
+  };
 
   const handleSubmit = async () => {
     if (!replyText.trim()) return;
@@ -186,10 +202,10 @@ function ReviewCard({
             </div>
           </div>
 
-          {/* Rating + date */}
+          {/* Rating + date — shown as /10, stars mapped from /10 → /5 */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             <div className="flex items-center gap-1">
-              <StarRating rating={stars} size="sm" />
+              <StarRating rating={review.overall_rating} size="sm" />
               <span className="text-xs font-bold text-slate-700">{review.overall_rating}/10</span>
             </div>
             <span className="text-[10px] text-slate-400">
@@ -224,8 +240,11 @@ function ReviewCard({
 
         {/* ── Footer ── */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-50 mt-auto">
-          <span className={cn("flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize", sentimentConfig.cls)}>
-            {sentimentConfig.icon} {sentiment}
+          <span className={cn(
+            "flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize",
+            sentimentConfig[sentiment].cls
+          )}>
+            {sentimentConfig[sentiment].icon} {sentiment}
           </span>
           <button
             onClick={() => setShowReplyInput(!showReplyInput)}
@@ -271,7 +290,7 @@ function ReviewCard({
             >
               <textarea
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyText(e.target.value)}
                 placeholder="Write a management response..."
                 rows={3}
                 className="w-full text-sm border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-azure-200 resize-none"
@@ -288,7 +307,10 @@ function ReviewCard({
                   disabled={submitting || !replyText.trim()}
                   className="flex items-center gap-1.5 text-xs px-4 py-1.5 gradient-azure text-white rounded-lg font-medium disabled:opacity-50"
                 >
-                  {submitting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                  {submitting
+                    ? <RefreshCw className="w-3 h-3 animate-spin" />
+                    : <Send className="w-3 h-3" />
+                  }
                   Post Reply
                 </button>
               </div>
@@ -302,14 +324,14 @@ function ReviewCard({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function ReviewsPage() {
-  const [reviews, setReviews]           = useState<Review[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [search, setSearch]             = useState("");
-  const [hotelFilter, setHotelFilter]   = useState("all");
-  const [platformFilter, setPlatformFilter] = useState("all");
-  const [sentimentFilter, setSentimentFilter] = useState("all");
-  const [sortBy, setSortBy]             = useState<"date" | "rating">("date");
-  const [showFilters, setShowFilters]   = useState(false);
+  const [reviews, setReviews]                     = useState<Review[]>([]);
+  const [loading, setLoading]                     = useState(true);
+  const [search, setSearch]                       = useState("");
+  const [hotelFilter, setHotelFilter]             = useState("all");
+  const [platformFilter, setPlatformFilter]       = useState("all");
+  const [sentimentFilter, setSentimentFilter]     = useState("all");
+  const [sortBy, setSortBy]                       = useState<"date" | "rating">("date");
+  const [showFilters, setShowFilters]             = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -334,6 +356,7 @@ export default function ReviewsPage() {
 
     if (!error && data) {
       setReviews(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data.map((r: any) => ({
           ...r,
           first_name: r.guests?.first_name ?? "Guest",
@@ -345,16 +368,16 @@ export default function ReviewsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchReviews(); }, []);
+  useEffect(() => { fetchReviews(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleReplySubmit = async (reviewId: number, text: string) => {
+  const handleReplySubmit = async (reviewId: number, text: string): Promise<void> => {
     const { error } = await supabase
       .from("reviews")
       .update({ response_text: text, responded_at: new Date().toISOString() })
       .eq("review_id", reviewId);
     if (!error) {
-      setReviews((prev) =>
-        prev.map((r) =>
+      setReviews((prev: Review[]) =>
+        prev.map((r: Review) =>
           r.review_id === reviewId
             ? { ...r, response_text: text, responded_at: new Date().toISOString() }
             : r
@@ -364,41 +387,44 @@ export default function ReviewsPage() {
   };
 
   // ── Derived stats ──
+  // avgRating is out of 10
   const avgRating = reviews.length
-    ? (reviews.reduce((s, r) => s + r.overall_rating, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((s: number, r: Review) => s + r.overall_rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
   const sentimentCounts = {
-    positive: reviews.filter((r) => getSentiment(r.overall_rating) === "positive").length,
-    neutral:  reviews.filter((r) => getSentiment(r.overall_rating) === "neutral").length,
-    negative: reviews.filter((r) => getSentiment(r.overall_rating) === "negative").length,
+    positive: reviews.filter((r: Review) => getSentiment(r.overall_rating) === "positive").length,
+    neutral:  reviews.filter((r: Review) => getSentiment(r.overall_rating) === "neutral").length,
+    negative: reviews.filter((r: Review) => getSentiment(r.overall_rating) === "negative").length,
   };
 
-  const repliedCount   = reviews.filter((r) => r.response_text).length;
-  const responseRate   = reviews.length ? Math.round((repliedCount / reviews.length) * 100) : 0;
-  const pendingCount   = reviews.length - repliedCount;
-  const positiveRate   = reviews.length ? Math.round((sentimentCounts.positive / reviews.length) * 100) : 0;
+  const repliedCount  = reviews.filter((r: Review) => r.response_text).length;
+  const responseRate  = reviews.length ? Math.round((repliedCount / reviews.length) * 100) : 0;
+  const pendingCount  = reviews.length - repliedCount;
+  const positiveRate  = reviews.length
+    ? Math.round((sentimentCounts.positive / reviews.length) * 100)
+    : 0;
 
   const hotelStats = [
-    { hotel_id: 1, hotel_name: "Grand Azure Karachi",       color: "azure"   },
-    { hotel_id: 2, hotel_name: "Grand Azure Lahore",        color: "emerald" },
-    { hotel_id: 3, hotel_name: "Azure Boutique Islamabad",  color: "violet"  },
+    { hotel_id: 1, hotel_name: "Grand Azure Karachi",      color: "azure"   },
+    { hotel_id: 2, hotel_name: "Grand Azure Lahore",       color: "emerald" },
+    { hotel_id: 3, hotel_name: "Azure Boutique Islamabad", color: "violet"  },
   ].map((h) => {
-    const hr = reviews.filter((r) => r.hotel_id === h.hotel_id);
+    const hr = reviews.filter((r: Review) => r.hotel_id === h.hotel_id);
     return {
       ...h,
-      total:      hr.length,
+      total: hr.length,
       avg_rating: hr.length
-        ? parseFloat((hr.reduce((s, r) => s + r.overall_rating, 0) / hr.length).toFixed(1))
+        ? parseFloat((hr.reduce((s: number, r: Review) => s + r.overall_rating, 0) / hr.length).toFixed(1))
         : 0,
     };
   });
 
-  const platforms = [...new Set(reviews.map((r) => r.platform))];
+  const platforms = [...new Set(reviews.map((r: Review) => r.platform))];
 
   // ── Filtered list ──
   const filtered = reviews
-    .filter((r) => {
+    .filter((r: Review) => {
       if (hotelFilter !== "all" && r.hotel_id !== parseInt(hotelFilter)) return false;
       if (platformFilter !== "all" && r.platform !== platformFilter) return false;
       if (sentimentFilter !== "all" && getSentiment(r.overall_rating) !== sentimentFilter) return false;
@@ -412,13 +438,15 @@ export default function ReviewsPage() {
       }
       return true;
     })
-    .sort((a, b) =>
+    .sort((a: Review, b: Review) =>
       sortBy === "rating"
         ? b.overall_rating - a.overall_rating
         : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
-  const hasFilters = hotelFilter !== "all" || platformFilter !== "all" || sentimentFilter !== "all" || search;
+  const hasFilters =
+    hotelFilter !== "all" || platformFilter !== "all" ||
+    sentimentFilter !== "all" || search !== "";
 
   // ── Render ──
   return (
@@ -442,6 +470,7 @@ export default function ReviewsPage() {
               </p>
             </div>
           </div>
+          {/* Average shown out of 10 */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-premium border border-slate-100 self-start xs:self-auto shrink-0">
             <Star className="w-4 h-4 sm:w-5 sm:h-5 text-gold-500 fill-gold-500" />
             <span className="text-xl sm:text-2xl font-bold text-slate-800">{avgRating}</span>
@@ -525,6 +554,7 @@ export default function ReviewsPage() {
                     <p className="text-[11px] text-slate-400 truncate pr-2">{hotel.hotel_name}</p>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl sm:text-3xl font-bold text-slate-800">{hotel.avg_rating}</span>
+                      {/* Correctly labelled /10 */}
                       <span className="text-xs text-slate-400">/10</span>
                     </div>
                   </div>
@@ -532,7 +562,8 @@ export default function ReviewsPage() {
                     <Star className="w-4 h-4 text-white fill-white" />
                   </div>
                 </div>
-                <StarRating rating={Math.round((hotel.avg_rating / 10) * 5)} size="sm" />
+                {/* StarRating handles /10 → /5 star conversion internally */}
+                <StarRating rating={hotel.avg_rating} size="sm" />
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
                   <span className="text-xs text-slate-400">{hotel.total} review{hotel.total !== 1 ? "s" : ""}</span>
                   <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
@@ -558,8 +589,8 @@ export default function ReviewsPage() {
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             {[
               { label: "Positive", count: sentimentCounts.positive, bar: "bg-emerald-500", text: "text-emerald-600", icon: <Smile className="w-3.5 h-3.5" /> },
-              { label: "Neutral",  count: sentimentCounts.neutral,  bar: "bg-amber-400",   text: "text-amber-600",  icon: <Meh  className="w-3.5 h-3.5" /> },
-              { label: "Negative", count: sentimentCounts.negative, bar: "bg-rose-500",    text: "text-rose-600",   icon: <Frown className="w-3.5 h-3.5"/> },
+              { label: "Neutral",  count: sentimentCounts.neutral,  bar: "bg-amber-400",   text: "text-amber-600",  icon: <Meh   className="w-3.5 h-3.5" /> },
+              { label: "Negative", count: sentimentCounts.negative, bar: "bg-rose-500",    text: "text-rose-600",   icon: <Frown className="w-3.5 h-3.5" /> },
             ].map((s) => {
               const pct = reviews.length ? Math.round((s.count / reviews.length) * 100) : 0;
               return (
@@ -595,7 +626,7 @@ export default function ReviewsPage() {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                 placeholder="Search reviews..."
                 className="w-full pl-9 pr-8 py-2.5 bg-white rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-azure-200 shadow-sm"
               />
@@ -629,29 +660,42 @@ export default function ReviewsPage() {
                 exit={{ opacity: 0, height: 0 }}
                 className="flex flex-wrap gap-2 mb-3 overflow-hidden"
               >
-                <select value={hotelFilter} onChange={(e) => setHotelFilter(e.target.value)}
-                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[140px]">
+                <select
+                  value={hotelFilter}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setHotelFilter(e.target.value)}
+                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[140px]"
+                >
                   <option value="all">All Hotels</option>
                   <option value="1">Karachi</option>
                   <option value="2">Lahore</option>
                   <option value="3">Islamabad</option>
                 </select>
-                <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
-                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]">
+                <select
+                  value={platformFilter}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPlatformFilter(e.target.value)}
+                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]"
+                >
                   <option value="all">All Platforms</option>
-                  {platforms.map((p) => (
+                  {platforms.map((p: string) => (
                     <option key={p} value={p}>{PLATFORM_LABEL[p] ?? p}</option>
                   ))}
                 </select>
-                <select value={sentimentFilter} onChange={(e) => setSentimentFilter(e.target.value)}
-                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]">
+                <select
+                  value={sentimentFilter}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSentimentFilter(e.target.value)}
+                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]"
+                >
                   <option value="all">All Sentiments</option>
-                  <option value="positive">Positive (9–10)</option>
-                  <option value="neutral">Neutral (7–8)</option>
-                  <option value="negative">Negative (≤6)</option>
+                  {/* Labels match the /10 scale */}
+                  <option value="positive">Positive (8–10 ✦✦✦✦✦)</option>
+                  <option value="neutral">Neutral (6–7 ✦✦✦)</option>
+                  <option value="negative">Negative (1–5 ✦✦)</option>
                 </select>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "date" | "rating")}
-                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]">
+                <select
+                  value={sortBy}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as "date" | "rating")}
+                  className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]"
+                >
                   <option value="date">Latest First</option>
                   <option value="rating">Highest Rated</option>
                 </select>
@@ -667,7 +711,12 @@ export default function ReviewsPage() {
             </p>
             {hasFilters && (
               <button
-                onClick={() => { setHotelFilter("all"); setPlatformFilter("all"); setSentimentFilter("all"); setSearch(""); }}
+                onClick={() => {
+                  setHotelFilter("all");
+                  setPlatformFilter("all");
+                  setSentimentFilter("all");
+                  setSearch("");
+                }}
                 className="text-xs text-rose-500 hover:text-rose-700 font-medium transition-colors"
               >
                 Clear filters
@@ -691,7 +740,7 @@ export default function ReviewsPage() {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
-              {filtered.map((review, i) => (
+              {filtered.map((review: Review, i: number) => (
                 <ReviewCard
                   key={review.review_id}
                   review={review}
