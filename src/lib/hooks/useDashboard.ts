@@ -76,17 +76,18 @@ export function useDashboardStats() {
       try {
         const supabase = createClient()
 
-        // Total revenue
-        const { data: revenueData } = await supabase
-          .from('bookings')
-          .select('total_amount')
-          .eq('booking_status', 'checked_out')
+        // ✅ FIX: Total revenue now comes from invoices paid_amount (all payments
+        // actually collected), not just checked_out bookings total_amount.
+        // This ensures every payment recorded on any booking status is counted.
+        const { data: invoiceData } = await supabase
+          .from('invoices')
+          .select('paid_amount')
 
-        const totalRevenue = revenueData?.reduce(
-          (sum, b) => sum + (b.total_amount ?? 0), 0
+        const totalRevenue = invoiceData?.reduce(
+          (sum, inv) => sum + (parseFloat(inv.paid_amount) || 0), 0
         ) ?? 0
 
-        // Total bookings
+        // Total bookings — all statuses
         const { data: allBookings } = await supabase
           .from('bookings')
           .select('booking_id')
@@ -107,7 +108,7 @@ export function useDashboardStats() {
           ? Math.round((occupied / totalRooms) * 100)
           : 0
 
-        // Check-ins = confirmed bookings (upcoming)
+        // Confirmed bookings (upcoming / not yet checked in)
         const { data: checkinData } = await supabase
           .from('bookings')
           .select('booking_id')
@@ -115,7 +116,7 @@ export function useDashboardStats() {
 
         const checkinToday = checkinData?.length ?? 0
 
-        // Check-outs = currently checked_in bookings
+        // Currently checked-in bookings
         const { data: checkoutData } = await supabase
           .from('bookings')
           .select('booking_id')
@@ -123,7 +124,7 @@ export function useDashboardStats() {
 
         const checkoutToday = checkoutData?.length ?? 0
 
-        // Pending housekeeping
+        // Pending housekeeping tasks
         const { data: hkData } = await supabase
           .from('housekeeping_schedules')
           .select('schedule_id')
@@ -131,7 +132,7 @@ export function useDashboardStats() {
 
         const pendingHousekeeping = hkData?.length ?? 0
 
-        // Open maintenance
+        // Open maintenance requests
         const { data: mtData } = await supabase
           .from('maintenance_requests')
           .select('request_id')
@@ -167,6 +168,7 @@ export function useDashboardStats() {
 
   return { stats, loading, error }
 }
+
 export function useMonthlyRevenue() {
   const [data, setData] = useState<MonthlyRevenue[]>([])
   const [loading, setLoading] = useState(true)
@@ -176,12 +178,12 @@ export function useMonthlyRevenue() {
       try {
         const supabase = createClient()
 
-        // Fetch ALL checked_out bookings — no year filter
-        const { data: bookings } = await supabase
-          .from('bookings')
-          .select('total_amount, check_in_date')
-          .eq('booking_status', 'checked_out')
-          .order('check_in_date')
+        // ✅ FIX: Monthly revenue now comes from invoices + payments,
+        // not just checked_out bookings. Groups by invoice_date month.
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('paid_amount, invoice_date')
+          .order('invoice_date')
 
         const monthNames = [
           'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -190,16 +192,16 @@ export function useMonthlyRevenue() {
 
         const monthlyMap: Record<number, { revenue: number; bookings: number }> = {}
 
-        bookings?.forEach(b => {
-          const month = new Date(b.check_in_date).getMonth()
+        invoices?.forEach(inv => {
+          const month = new Date(inv.invoice_date).getMonth()
           if (!monthlyMap[month]) monthlyMap[month] = { revenue: 0, bookings: 0 }
-          monthlyMap[month].revenue += b.total_amount ?? 0
+          monthlyMap[month].revenue  += parseFloat(inv.paid_amount) || 0
           monthlyMap[month].bookings += 1
         })
 
         const result = monthNames.map((month, idx) => ({
           month,
-          revenue: monthlyMap[idx]?.revenue ?? 0,
+          revenue:  monthlyMap[idx]?.revenue  ?? 0,
           bookings: monthlyMap[idx]?.bookings ?? 0,
         }))
 
@@ -216,6 +218,7 @@ export function useMonthlyRevenue() {
 
   return { data, loading }
 }
+
 export function useHotelOccupancy() {
   const [data, setData] = useState<HotelOccupancy[]>([])
   const [loading, setLoading] = useState(true)
@@ -234,7 +237,7 @@ export function useHotelOccupancy() {
           .select('hotel_id, status')
 
         const result: HotelOccupancy[] = (hotels ?? []).map(hotel => {
-          const hotelRooms = rooms?.filter(r => r.hotel_id === hotel.hotel_id) ?? []
+          const hotelRooms  = rooms?.filter(r => r.hotel_id === hotel.hotel_id) ?? []
           const occupied    = hotelRooms.filter(r => r.status === 'occupied').length
           const available   = hotelRooms.filter(r => r.status === 'available').length
           const dirty       = hotelRooms.filter(r => r.status === 'dirty').length
@@ -269,7 +272,7 @@ export function useHotelOccupancy() {
   return { data, loading }
 }
 
-// Active Bookings — only confirmed + checked_in
+// Active Bookings — confirmed + checked_in
 export function useTodayArrivals() {
   const [data, setData] = useState<TodayArrival[]>([])
   const [loading, setLoading] = useState(true)
@@ -332,7 +335,7 @@ export function useTodayArrivals() {
   return { data, loading }
 }
 
-// Recent Bookings — only checked_out (completed stays)
+// Recent Bookings — checked_out (completed stays)
 export function useRecentBookings() {
   const [data, setData] = useState<RecentBooking[]>([])
   const [loading, setLoading] = useState(true)
