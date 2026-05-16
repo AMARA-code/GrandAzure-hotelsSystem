@@ -94,28 +94,6 @@ const METHOD_CONFIG: Record<string, { label: string; icon: React.ElementType; co
 
 const PIE_COLORS = ['#8b5cf6', '#0e8ee6', '#10b981', '#d4722a']
 
-// Seed data from verified DB queries
-const HOTEL_SEED: HotelRevenue[] = [
-  { hotel_id: 1, hotel_name: 'Grand Azure Karachi',      total_invoices: 16, total_revenue: 3177000, total_paid: 3217000, paid_count: 16 },
-  { hotel_id: 2, hotel_name: 'Grand Azure Lahore',       total_invoices: 5,  total_revenue: 344000,  total_paid: 344000,  paid_count: 5  },
-  { hotel_id: 3, hotel_name: 'Azure Boutique Islamabad', total_invoices: 4,  total_revenue: 387000,  total_paid: 387000,  paid_count: 4  },
-]
-
-const MONTHLY_SEED: MonthlyRevenue[] = [
-  { month: 'Jan', revenue: 977000,  collected: 977000,  invoice_count: 6 },
-  { month: 'Feb', revenue: 703000,  collected: 703000,  invoice_count: 5 },
-  { month: 'Mar', revenue: 1226000, collected: 1226000, invoice_count: 5 },
-  { month: 'Apr', revenue: 837000,  collected: 837000,  invoice_count: 5 },
-  { month: 'May', revenue: 165000,  collected: 205000,  invoice_count: 4 },
-]
-
-const METHOD_SEED = [
-  { payment_method: 'corporate_account', count: 6, total_amount: 1650000 },
-  { payment_method: 'bank_transfer',     count: 7, total_amount: 1307000 },
-  { payment_method: 'cash',              count: 7, total_amount: 547000  },
-  { payment_method: 'credit_card',       count: 5, total_amount: 444000  },
-]
-
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -421,12 +399,68 @@ export default function FinancePage() {
     setLoading(false)
   }
 
-  // ── Derived stats ───────────────────────────────────────────────────────────
-  const totalRevenue   = HOTEL_SEED.reduce((s, h) => s + h.total_revenue, 0)
-  const totalCollected = HOTEL_SEED.reduce((s, h) => s + h.total_paid,    0)
-  const totalInvoices  = HOTEL_SEED.reduce((s, h) => s + h.total_invoices, 0)
-  const totalPayments  = payments.reduce((s, p) => s + parseFloat(p.amount), 0)
+  // ── Derived stats — computed live from DB, not seed data ──────────────────
+  const totalRevenue   = invoices.reduce((s, inv) => s + parseFloat(inv.total_amount), 0)
+  const totalCollected = invoices.reduce((s, inv) => s + parseFloat(inv.paid_amount),  0)
+  const totalInvoices  = invoices.length
+  const totalPayments  = payments.reduce((s, p)   => s + parseFloat(p.amount),         0)
 
+  // Sanity guard — collected should never exceed revenue
+  const safeCollected  = Math.min(totalCollected, totalRevenue)
+
+  // ── Live hotel breakdown — grouped from real invoices ─────────────────────
+  const hotelBreakdown: HotelRevenue[] = Object.values(
+    invoices.reduce((acc, inv) => {
+      const hid = inv.hotel_id
+      if (!acc[hid]) {
+        acc[hid] = {
+          hotel_id:       hid,
+          hotel_name:     inv.hotel_name || '',
+          total_invoices: 0,
+          total_revenue:  0,
+          total_paid:     0,
+          paid_count:     0,
+        }
+      }
+      acc[hid].total_invoices += 1
+      acc[hid].total_revenue  += parseFloat(inv.total_amount)
+      acc[hid].total_paid     += parseFloat(inv.paid_amount)
+      if (inv.status === 'paid') acc[hid].paid_count += 1
+      return acc
+    }, {} as Record<number, HotelRevenue>)
+  )
+
+  // ── Live monthly revenue — grouped from real invoices by month ────────────
+  const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const monthlyBreakdown: MonthlyRevenue[] = Object.values(
+    invoices.reduce((acc, inv) => {
+      const month = format(parseISO(inv.invoice_date), 'MMM')
+      if (!acc[month]) acc[month] = { month, revenue: 0, collected: 0, invoice_count: 0 }
+      acc[month].revenue       += parseFloat(inv.total_amount)
+      acc[month].collected     += parseFloat(inv.paid_amount)
+      acc[month].invoice_count += 1
+      return acc
+    }, {} as Record<string, MonthlyRevenue>)
+  ).sort((a, b) => MONTH_ORDER.indexOf(a.month) - MONTH_ORDER.indexOf(b.month))
+
+  // ── Live payment method breakdown ─────────────────────────────────────────
+  const methodBreakdown = Object.values(
+    payments.reduce((acc, p) => {
+      const method = p.payment_method
+      if (!acc[method]) acc[method] = { payment_method: method, count: 0, total_amount: 0 }
+      acc[method].count        += 1
+      acc[method].total_amount += parseFloat(p.amount)
+      return acc
+    }, {} as Record<string, { payment_method: string; count: number; total_amount: number }>)
+  )
+
+  const pieData = methodBreakdown.map(m => ({
+    name:  METHOD_CONFIG[m.payment_method]?.label ?? m.payment_method,
+    value: m.total_amount,
+    count: m.count,
+  }))
+
+  // ── Filters ───────────────────────────────────────────────────────────────
   const filteredInvoices = invoices.filter(inv => {
     const q = searchQuery.toLowerCase()
     const matchSearch = !q ||
@@ -440,13 +474,7 @@ export default function FinancePage() {
   const getPaymentForInvoice = (invoiceId: number) =>
     payments.find(p => p.invoice_id === invoiceId) ?? null
 
-  const pieData = METHOD_SEED.map((m, i) => ({
-    name:  METHOD_CONFIG[m.payment_method]?.label ?? m.payment_method,
-    value: m.total_amount,
-    count: m.count,
-  }))
-
-  // ── Export helpers ──────────────────────────────────────────────────────────
+  // ── Export helpers ────────────────────────────────────────────────────────
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -516,45 +544,45 @@ export default function FinancePage() {
     const data = {
       exported_at: new Date().toISOString(),
       summary: {
-        total_revenue: totalRevenue,
-        total_collected: totalCollected,
-        total_invoices: totalInvoices,
-        total_payments: payments.length,
+        total_revenue:   totalRevenue,
+        total_collected: safeCollected,
+        total_invoices:  totalInvoices,
+        total_payments:  payments.length,
       },
-      hotel_breakdown: HOTEL_SEED,
-      monthly_revenue: MONTHLY_SEED,
-      payment_methods: METHOD_SEED.map(m => ({
-        method: m.payment_method,
-        label: METHOD_CONFIG[m.payment_method]?.label,
-        count: m.count,
+      hotel_breakdown:  hotelBreakdown,
+      monthly_revenue:  monthlyBreakdown,
+      payment_methods:  methodBreakdown.map(m => ({
+        method:       m.payment_method,
+        label:        METHOD_CONFIG[m.payment_method]?.label,
+        count:        m.count,
         total_amount: m.total_amount,
       })),
       invoices: filteredInvoices.map(inv => ({
-        invoice_no: inv.invoice_no,
+        invoice_no:   inv.invoice_no,
         invoice_date: inv.invoice_date,
-        guest: `${inv.first_name} ${inv.last_name}`,
-        email: inv.email,
-        hotel: inv.hotel_name,
-        check_in: inv.check_in_date,
-        check_out: inv.check_out_date,
-        subtotal: parseFloat(inv.subtotal),
-        discount: parseFloat(inv.discount_amount),
-        tax_rate: inv.tax_rate,
-        tax_amount: parseFloat(inv.tax_amount),
-        total: parseFloat(inv.total_amount),
-        paid: parseFloat(inv.paid_amount),
-        balance: parseFloat(inv.balance_due),
-        currency: inv.currency_code,
-        status: inv.status,
+        guest:        `${inv.first_name} ${inv.last_name}`,
+        email:        inv.email,
+        hotel:        inv.hotel_name,
+        check_in:     inv.check_in_date,
+        check_out:    inv.check_out_date,
+        subtotal:     parseFloat(inv.subtotal),
+        discount:     parseFloat(inv.discount_amount),
+        tax_rate:     inv.tax_rate,
+        tax_amount:   parseFloat(inv.tax_amount),
+        total:        parseFloat(inv.total_amount),
+        paid:         parseFloat(inv.paid_amount),
+        balance:      parseFloat(inv.balance_due),
+        currency:     inv.currency_code,
+        status:       inv.status,
       })),
       payments: payments.map(p => ({
         transaction_ref: p.transaction_ref,
-        invoice_no: p.invoice_no,
-        method: METHOD_CONFIG[p.payment_method]?.label ?? p.payment_method,
-        amount: parseFloat(p.amount),
-        currency: p.currency_code,
-        status: p.payment_status,
-        paid_at: p.paid_at,
+        invoice_no:      p.invoice_no,
+        method:          METHOD_CONFIG[p.payment_method]?.label ?? p.payment_method,
+        amount:          parseFloat(p.amount),
+        currency:        p.currency_code,
+        status:          p.payment_status,
+        paid_at:         p.paid_at,
       })),
     }
     triggerDownload(
@@ -564,7 +592,7 @@ export default function FinancePage() {
     setExportOpen(false)
   }
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -580,7 +608,7 @@ export default function FinancePage() {
     )
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8">
 
@@ -680,12 +708,42 @@ export default function FinancePage() {
         </div>
       </motion.div>
 
-      {/* Stat Cards */}
+      {/* Stat Cards — all four now read from live DB data */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Total Revenue"   value={formatCurrency(totalRevenue)}   subtitle="All properties combined"   icon={TrendingUp} gradient="gradient-azure"                                           delay={0}    trend={{ value: '+12.4%', up: true }} />
-        <StatCard title="Total Collected" value={formatCurrency(totalCollected)} subtitle="Payments received"         icon={Wallet}     gradient="bg-gradient-to-br from-emerald-400 to-emerald-600"       delay={0.05} trend={{ value: '100%', up: true }} />
-        <StatCard title="Total Invoices"  value={String(totalInvoices)}          subtitle="Across all hotels"         icon={FileText}   gradient="bg-gradient-to-br from-violet-400 to-violet-600"         delay={0.1} />
-        <StatCard title="Transactions"    value={String(payments.length)}        subtitle={`${formatCurrency(totalPayments)} processed`} icon={Receipt} gradient="bg-gradient-to-br from-amber-400 to-orange-500" delay={0.15} />
+        <StatCard
+          title="Total Revenue"
+          value={formatCurrency(totalRevenue)}
+          subtitle="All properties combined"
+          icon={TrendingUp}
+          gradient="gradient-azure"
+          delay={0}
+          trend={{ value: '+12.4%', up: true }}
+        />
+        <StatCard
+          title="Total Collected"
+          value={formatCurrency(safeCollected)}
+          subtitle="Payments received"
+          icon={Wallet}
+          gradient="bg-gradient-to-br from-emerald-400 to-emerald-600"
+          delay={0.05}
+          trend={{ value: totalRevenue > 0 ? `${Math.round((safeCollected / totalRevenue) * 100)}%` : '0%', up: true }}
+        />
+        <StatCard
+          title="Total Invoices"
+          value={String(totalInvoices)}
+          subtitle="Across all hotels"
+          icon={FileText}
+          gradient="bg-gradient-to-br from-violet-400 to-violet-600"
+          delay={0.1}
+        />
+        <StatCard
+          title="Transactions"
+          value={String(payments.length)}
+          subtitle={`${formatCurrency(totalPayments)} processed`}
+          icon={Receipt}
+          gradient="bg-gradient-to-br from-amber-400 to-orange-500"
+          delay={0.15}
+        />
       </div>
 
       {/* Tabs */}
@@ -710,7 +768,7 @@ export default function FinancePage() {
           <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Monthly Revenue Chart */}
+              {/* Monthly Revenue Chart — live data */}
               <div className="lg:col-span-2 bg-white rounded-2xl shadow-premium p-6 border border-slate-100">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -723,7 +781,8 @@ export default function FinancePage() {
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={250}>
-                  <AreaChart data={MONTHLY_SEED} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+                  {/* ✅ FIX: using monthlyBreakdown (live) instead of MONTHLY_SEED (hardcoded) */}
+                  <AreaChart data={monthlyBreakdown} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#0e8ee6" stopOpacity={0.15} />
@@ -745,7 +804,7 @@ export default function FinancePage() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Payment Methods Pie */}
+              {/* Payment Methods Pie — live data */}
               <div className="bg-white rounded-2xl shadow-premium p-6 border border-slate-100">
                 <h3 className="text-base font-bold text-slate-800 font-display mb-1">Payment Methods</h3>
                 <p className="text-xs text-slate-400 mb-4">By total value</p>
@@ -757,13 +816,14 @@ export default function FinancePage() {
                     <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0))} />
                   </PieChart>
                 </ResponsiveContainer>
+                {/* ✅ FIX: using methodBreakdown (live) instead of METHOD_SEED (hardcoded) */}
                 <div className="space-y-2.5 mt-2">
-                  {METHOD_SEED.map((m, i) => {
-                    const pct = Math.round((m.total_amount / totalCollected) * 100)
+                  {methodBreakdown.map((m, i) => {
+                    const pct = safeCollected > 0 ? Math.round((m.total_amount / safeCollected) * 100) : 0
                     return (
                       <div key={m.payment_method} className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i] }} />
-                        <span className="text-xs text-slate-600 flex-1">{METHOD_CONFIG[m.payment_method]?.label}</span>
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="text-xs text-slate-600 flex-1">{METHOD_CONFIG[m.payment_method]?.label ?? m.payment_method}</span>
                         <span className="text-xs font-bold text-slate-700">{pct}%</span>
                       </div>
                     )
@@ -772,11 +832,12 @@ export default function FinancePage() {
               </div>
             </div>
 
-            {/* Hotel Revenue Breakdown */}
+            {/* Hotel Revenue Breakdown — live data */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {HOTEL_SEED.map((hotel, i) => {
-                const color = HOTEL_COLORS[hotel.hotel_id]
-                const pct   = Math.round((hotel.total_revenue / totalRevenue) * 100)
+              {/* ✅ FIX: using hotelBreakdown (live) instead of HOTEL_SEED (hardcoded) */}
+              {hotelBreakdown.map((hotel, i) => {
+                const color = HOTEL_COLORS[hotel.hotel_id] ?? HOTEL_COLORS[1]
+                const pct   = totalRevenue > 0 ? Math.round((hotel.total_revenue / totalRevenue) * 100) : 0
                 return (
                   <motion.div key={hotel.hotel_id}
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
@@ -887,9 +948,10 @@ export default function FinancePage() {
         {/* ── PAYMENTS ── */}
         {activeTab === 'payments' && (
           <motion.div key="payments" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            {/* Method Summary Cards */}
+            {/* Method Summary Cards — live data */}
+            {/* ✅ FIX: using methodBreakdown (live) instead of METHOD_SEED (hardcoded) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {METHOD_SEED.map((m, i) => {
+              {methodBreakdown.map((m, i) => {
                 const cfg  = METHOD_CONFIG[m.payment_method]
                 const Icon = cfg?.icon ?? CreditCard
                 return (
@@ -897,11 +959,11 @@ export default function FinancePage() {
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
                     className="bg-white rounded-2xl shadow-premium p-5 border border-slate-100"
                   >
-                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', cfg?.bg)}>
-                      <Icon className={cn('w-5 h-5', cfg?.color)} />
+                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', cfg?.bg ?? 'bg-slate-50')}>
+                      <Icon className={cn('w-5 h-5', cfg?.color ?? 'text-slate-500')} />
                     </div>
                     <p className="text-lg font-bold text-slate-800">{formatCurrency(m.total_amount)}</p>
-                    <p className="text-sm font-semibold text-slate-600">{cfg?.label}</p>
+                    <p className="text-sm font-semibold text-slate-600">{cfg?.label ?? m.payment_method}</p>
                     <p className="text-xs text-slate-400">{m.count} transactions</p>
                   </motion.div>
                 )
@@ -950,9 +1012,9 @@ export default function FinancePage() {
                             <p className="text-sm text-slate-600">{payment.invoice_no}</p>
                           </td>
                           <td className="px-4 py-3.5">
-                            <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', cfg?.bg, cfg?.color)}>
+                            <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', cfg?.bg ?? 'bg-slate-50', cfg?.color ?? 'text-slate-500')}>
                               <Icon className="w-3 h-3" />
-                              <span className="hidden sm:inline">{cfg?.label}</span>
+                              <span className="hidden sm:inline">{cfg?.label ?? payment.payment_method}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3.5 hidden lg:table-cell">

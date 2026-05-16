@@ -6,7 +6,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import {
   Users, UserCheck, Building2, Search, Plus,
   ChevronDown, ChevronUp, Calendar,
-  DollarSign, Filter, RefreshCw,
+  DollarSign, Filter,
   X, MoreHorizontal, Shield
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils/formatters'
@@ -59,14 +59,10 @@ function getInitials(first: string, last: string) {
 
 function getInitialsBg(name: string) {
   const colors = [
-    'bg-blue-100 text-blue-700',
-    'bg-emerald-100 text-emerald-700',
-    'bg-violet-100 text-violet-700',
-    'bg-amber-100 text-amber-700',
-    'bg-rose-100 text-rose-700',
-    'bg-cyan-100 text-cyan-700',
-    'bg-orange-100 text-orange-700',
-    'bg-pink-100 text-pink-700',
+    'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
+    'bg-violet-100 text-violet-700', 'bg-amber-100 text-amber-700',
+    'bg-rose-100 text-rose-700', 'bg-cyan-100 text-cyan-700',
+    'bg-orange-100 text-orange-700', 'bg-pink-100 text-pink-700',
   ]
   let hash = 0
   for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i)
@@ -96,14 +92,10 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
   food_beverage: 'F&B', finance: 'Finance',
 }
 const HOTEL_ACCENT: Record<number, string> = {
-  1: 'border-l-[#0e8ee6]',
-  2: 'border-l-emerald-500',
-  3: 'border-l-violet-500',
+  1: 'border-l-[#0e8ee6]', 2: 'border-l-emerald-500', 3: 'border-l-violet-500',
 }
 const HOTEL_DOT: Record<number, string> = {
-  1: 'bg-[#0e8ee6]',
-  2: 'bg-emerald-500',
-  3: 'bg-violet-500',
+  1: 'bg-[#0e8ee6]', 2: 'bg-emerald-500', 3: 'bg-violet-500',
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -171,6 +163,13 @@ export default function StaffPage() {
   }
 
   useEffect(() => { fetchAll() }, [])
+
+  // ─── Called after edit/delete in modal — refreshes list, keeps panel closed ──
+  const handleRefreshAfterEdit = async () => {
+    setShowDetail(false)
+    setSelectedStaff(null)
+    await fetchAll()
+  }
 
   // ─── Filtered & sorted ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -240,9 +239,6 @@ export default function StaffPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    // KEY FIX: w-full + min-w-0 prevents content from escaping its container.
-    // All padding is symmetric: px-4 on mobile, px-6 on md, px-8 on xl.
-    // No fixed widths — everything uses percentages / flex / grid.
     <div className="w-full min-w-0 bg-slate-50 min-h-screen">
       <div className="w-full min-w-0 px-4 py-6 md:px-6 xl:px-8">
 
@@ -267,14 +263,6 @@ export default function StaffPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <motion.button
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              onClick={fetchAll}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors sm:text-sm"
-            >
-              <RefreshCw className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline">Refresh</span>
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               onClick={() => setShowAdd(true)}
               className="flex items-center gap-1.5 gradient-azure rounded-xl px-3 py-2 text-xs font-semibold text-white shadow-azure transition-all hover:shadow-lg sm:px-4 sm:text-sm"
             >
@@ -285,37 +273,12 @@ export default function StaffPage() {
         </motion.div>
 
         {/* ── Stats Cards ── */}
-        {/* 2 cols on mobile, 4 cols on lg and above */}
         <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            {
-              label: 'Total Staff',
-              value: loading ? '—' : stats.total,
-              sub: `${stats.active} active`,
-              icon: <Users className="w-4 h-4 sm:w-5 sm:h-5" />,
-              iconClass: 'bg-blue-50 text-[#0e8ee6]',
-            },
-            {
-              label: 'Active Members',
-              value: loading ? '—' : stats.active,
-              sub: `${stats.total - stats.active} inactive`,
-              icon: <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />,
-              iconClass: 'bg-emerald-50 text-emerald-600',
-            },
-            {
-              label: 'Management',
-              value: loading ? '—' : stats.managers,
-              sub: 'Managerial roles',
-              icon: <Shield className="w-4 h-4 sm:w-5 sm:h-5" />,
-              iconClass: 'bg-violet-50 text-violet-600',
-            },
-            {
-              label: 'Payroll',
-              value: loading ? '—' : formatCurrency(stats.totalSalary),
-              sub: 'Monthly total',
-              icon: <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />,
-              iconClass: 'bg-amber-50 text-amber-600',
-            },
+            { label: 'Total Staff',     value: loading ? '—' : stats.total,                      sub: `${stats.active} active`,           icon: <Users className="w-4 h-4 sm:w-5 sm:h-5" />,     iconClass: 'bg-blue-50 text-[#0e8ee6]'     },
+            { label: 'Active Members',  value: loading ? '—' : stats.active,                     sub: `${stats.total - stats.active} inactive`, icon: <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />, iconClass: 'bg-emerald-50 text-emerald-600' },
+            { label: 'Management',      value: loading ? '—' : stats.managers,                   sub: 'Managerial roles',                  icon: <Shield className="w-4 h-4 sm:w-5 sm:h-5" />,    iconClass: 'bg-violet-50 text-violet-600'   },
+            { label: 'Payroll',         value: loading ? '—' : formatCurrency(stats.totalSalary), sub: 'Monthly total',                    icon: <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />, iconClass: 'bg-amber-50 text-amber-600'     },
           ].map((card, i) => (
             <motion.div
               key={card.label}
@@ -327,14 +290,10 @@ export default function StaffPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-medium text-slate-500 truncate sm:text-xs">{card.label}</p>
-                  <p className="mt-1 text-lg font-bold text-slate-800 truncate sm:text-xl xl:text-2xl">
-                    {card.value}
-                  </p>
+                  <p className="mt-1 text-lg font-bold text-slate-800 truncate sm:text-xl xl:text-2xl">{card.value}</p>
                   <p className="mt-0.5 text-[10px] text-slate-400 truncate sm:text-xs">{card.sub}</p>
                 </div>
-                <div className={cn('flex-shrink-0 rounded-xl p-1.5 sm:p-2', card.iconClass)}>
-                  {card.icon}
-                </div>
+                <div className={cn('flex-shrink-0 rounded-xl p-1.5 sm:p-2', card.iconClass)}>{card.icon}</div>
               </div>
             </motion.div>
           ))}
@@ -361,9 +320,7 @@ export default function StaffPage() {
               <span className={cn(
                 'rounded-full px-1.5 py-0.5 text-[10px] font-semibold flex-shrink-0',
                 hotelFilter === String(h.id) ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-              )}>
-                {h.count}
-              </span>
+              )}>{h.count}</span>
             </button>
           ))}
         </motion.div>
@@ -373,9 +330,7 @@ export default function StaffPage() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           className="mb-4 rounded-2xl bg-white shadow-premium border border-slate-100 overflow-hidden"
         >
-          {/* Top bar */}
           <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
-            {/* Search */}
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input
@@ -390,9 +345,7 @@ export default function StaffPage() {
                 </button>
               )}
             </div>
-
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Filter toggle */}
               <button
                 onClick={() => setShowFilters(v => !v)}
                 className={cn(
@@ -410,8 +363,6 @@ export default function StaffPage() {
                   </span>
                 )}
               </button>
-
-              {/* View toggle */}
               <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5 gap-0.5">
                 {(['table', 'grid'] as const).map(mode => (
                   <button
@@ -423,15 +374,12 @@ export default function StaffPage() {
                         ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
                         : 'text-slate-500 hover:text-slate-700'
                     )}
-                  >
-                    {mode}
-                  </button>
+                  >{mode}</button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Filter panel */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
@@ -442,79 +390,33 @@ export default function StaffPage() {
                 className="overflow-hidden"
               >
                 <div className="border-t border-slate-100 px-3 py-3 grid grid-cols-2 gap-2 sm:px-4 sm:py-4 sm:gap-3 md:grid-cols-3 xl:grid-cols-5">
-                  {/* Hotel */}
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">Hotel</label>
-                    <select
-                      value={hotelFilter}
-                      onChange={e => { setHotelFilter(e.target.value); setDeptFilter('all') }}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-[#0e8ee6] focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
-                    >
-                      <option value="all">All Hotels</option>
-                      {hotels.map(h => <option key={h.hotel_id} value={h.hotel_id}>{h.hotel_name}</option>)}
-                    </select>
-                  </div>
-                  {/* Dept */}
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">Department</label>
-                    <select
-                      value={deptFilter}
-                      onChange={e => setDeptFilter(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-[#0e8ee6] focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
-                    >
-                      <option value="all">All Depts</option>
-                      {availableDepts.map(d => <option key={d.department_id} value={d.department_id}>{d.dept_name}</option>)}
-                    </select>
-                  </div>
-                  {/* Category */}
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">Category</label>
-                    <select
-                      value={catFilter}
-                      onChange={e => setCatFilter(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-[#0e8ee6] focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
-                    >
-                      <option value="all">All</option>
-                      {Object.entries(ROLE_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </div>
-                  {/* Shift */}
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">Shift</label>
-                    <select
-                      value={shiftFilter}
-                      onChange={e => setShiftFilter(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-[#0e8ee6] focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
-                    >
-                      <option value="all">All Shifts</option>
-                      {Object.entries(SHIFT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </div>
-                  {/* Status */}
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">Status</label>
-                    <select
-                      value={activeFilter}
-                      onChange={e => setActiveFilter(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-[#0e8ee6] focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
-                    >
-                      <option value="all">All</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
+                  {[
+                    { label: 'Hotel', value: hotelFilter, onChange: (v: string) => { setHotelFilter(v); setDeptFilter('all') },
+                      options: [{ value: 'all', label: 'All Hotels' }, ...hotels.map(h => ({ value: String(h.hotel_id), label: h.hotel_name }))] },
+                    { label: 'Department', value: deptFilter, onChange: setDeptFilter,
+                      options: [{ value: 'all', label: 'All Depts' }, ...availableDepts.map(d => ({ value: String(d.department_id), label: d.dept_name }))] },
+                    { label: 'Category', value: catFilter, onChange: setCatFilter,
+                      options: [{ value: 'all', label: 'All' }, ...Object.entries(ROLE_CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v }))] },
+                    { label: 'Shift', value: shiftFilter, onChange: setShiftFilter,
+                      options: [{ value: 'all', label: 'All Shifts' }, ...Object.entries(SHIFT_LABELS).map(([k, v]) => ({ value: k, label: v }))] },
+                    { label: 'Status', value: activeFilter, onChange: setActiveFilter,
+                      options: [{ value: 'all', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }] },
+                  ].map(f => (
+                    <div key={f.label}>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">{f.label}</label>
+                      <select value={f.value} onChange={e => f.onChange(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-[#0e8ee6] focus:outline-none sm:px-3 sm:py-2 sm:text-sm">
+                        {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                  ))}
                 </div>
                 {activeFilterCount > 0 && (
                   <div className="border-t border-slate-100 px-3 pb-3 sm:px-4">
                     <button
-                      onClick={() => {
-                        setHotelFilter('all'); setDeptFilter('all')
-                        setShiftFilter('all'); setCatFilter('all'); setActiveFilter('all')
-                      }}
+                      onClick={() => { setHotelFilter('all'); setDeptFilter('all'); setShiftFilter('all'); setCatFilter('all'); setActiveFilter('all') }}
                       className="text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors"
-                    >
-                      Clear all filters
-                    </button>
+                    >Clear all filters</button>
                   </div>
                 )}
               </motion.div>
@@ -544,31 +446,23 @@ export default function StaffPage() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="rounded-2xl bg-white shadow-premium border border-slate-100 overflow-hidden"
           >
-            {/* Scrollable wrapper — table scrolls horizontally inside the card */}
             <div className="overflow-x-auto w-full">
               <table className="w-full" style={{ minWidth: '700px' }}>
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
                     {[
-                      { label: 'Employee',   field: 'first_name',  w: 'w-[200px]' },
-                      { label: 'Role',       field: 'role_name',   w: 'w-[160px]' },
-                      { label: 'Dept',       field: 'dept_name',   w: 'w-[120px]' },
-                      { label: 'Hotel',      field: 'hotel_name',  w: 'w-[100px]' },
-                      { label: 'Shift',      field: 'shift',       w: 'w-[90px]'  },
-                      { label: 'Salary',     field: 'salary',      w: 'w-[110px]' },
-                      { label: 'Hired',      field: 'hire_date',   w: 'w-[100px]' },
-                      { label: 'Status',     field: 'is_active',   w: 'w-[80px]'  },
-                      { label: '',           field: '',            w: 'w-[40px]'  },
+                      { label: 'Employee', field: 'first_name', w: 'w-[200px]' },
+                      { label: 'Role',     field: 'role_name',  w: 'w-[160px]' },
+                      { label: 'Dept',     field: 'dept_name',  w: 'w-[120px]' },
+                      { label: 'Hotel',    field: 'hotel_name', w: 'w-[100px]' },
+                      { label: 'Shift',    field: 'shift',      w: 'w-[90px]'  },
+                      { label: 'Salary',   field: 'salary',     w: 'w-[110px]' },
+                      { label: 'Hired',    field: 'hire_date',  w: 'w-[100px]' },
+                      { label: 'Status',   field: 'is_active',  w: 'w-[80px]'  },
+                      { label: '',         field: '',           w: 'w-[40px]'  },
                     ].map(col => (
-                      <th
-                        key={col.label}
-                        onClick={() => col.field && handleSort(col.field)}
-                        className={cn(
-                          col.w,
-                          'px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:px-4 sm:text-[11px]',
-                          col.field && 'cursor-pointer select-none hover:text-slate-600'
-                        )}
-                      >
+                      <th key={col.label} onClick={() => col.field && handleSort(col.field)}
+                        className={cn(col.w, 'px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:px-4 sm:text-[11px]', col.field && 'cursor-pointer select-none hover:text-slate-600')}>
                         <span className="flex items-center gap-1">
                           {col.label}
                           {col.field && <SortIcon field={col.field} />}
@@ -580,11 +474,7 @@ export default function StaffPage() {
                 <tbody>
                   <AnimatePresence mode="popLayout">
                     {filtered.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} className="py-16 text-center text-sm text-slate-400">
-                          No staff members found
-                        </td>
-                      </tr>
+                      <tr><td colSpan={9} className="py-16 text-center text-sm text-slate-400">No staff members found</td></tr>
                     ) : filtered.map((s, i) => (
                       <motion.tr
                         key={s.staff_id}
@@ -593,103 +483,56 @@ export default function StaffPage() {
                         exit={{ opacity: 0 }}
                         transition={{ delay: Math.min(i * 0.025, 0.3) }}
                         onClick={() => { setSelectedStaff(s); setShowDetail(true) }}
-                        className={cn(
-                          'group cursor-pointer border-b border-slate-50 transition-colors hover:bg-slate-50/60',
-                          'border-l-2',
-                          HOTEL_ACCENT[s.hotel_id] ?? 'border-l-slate-200'
-                        )}
+                        className={cn('group cursor-pointer border-b border-slate-50 transition-colors hover:bg-slate-50/60 border-l-2', HOTEL_ACCENT[s.hotel_id] ?? 'border-l-slate-200')}
                       >
-                        {/* Employee — initials + name text only */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
                           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                            <div className={cn(
-                              'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl text-[11px] font-bold sm:h-9 sm:w-9 sm:text-xs',
-                              getInitialsBg(`${s.first_name}${s.last_name}`)
-                            )}>
+                            <div className={cn('flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl text-[11px] font-bold sm:h-9 sm:w-9 sm:text-xs', getInitialsBg(`${s.first_name}${s.last_name}`))}>
                               {getInitials(s.first_name, s.last_name)}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-semibold text-slate-800 truncate sm:text-sm">
-                                {s.first_name} {s.last_name}
-                              </p>
+                              <p className="text-xs font-semibold text-slate-800 truncate sm:text-sm">{s.first_name} {s.last_name}</p>
                               <p className="text-[10px] text-slate-400 sm:text-xs">{s.employee_code}</p>
                             </div>
                           </div>
                         </td>
-
-                        {/* Role */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
                           <p className="text-xs text-slate-700 truncate sm:text-sm">{s.role_name}</p>
-                          <span className={cn(
-                            'mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-medium sm:px-2 sm:text-[10px]',
-                            ROLE_CATEGORY_COLORS[s.role_category] ?? 'bg-slate-100 text-slate-500'
-                          )}>
+                          <span className={cn('mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-medium sm:px-2 sm:text-[10px]', ROLE_CATEGORY_COLORS[s.role_category] ?? 'bg-slate-100 text-slate-500')}>
                             {ROLE_CATEGORY_LABELS[s.role_category] ?? s.role_category}
                           </span>
                         </td>
-
-                        {/* Dept */}
-                        <td className="px-3 py-3 sm:px-4 sm:py-3.5">
-                          <p className="text-xs text-slate-600 truncate sm:text-sm">{s.dept_name}</p>
-                        </td>
-
-                        {/* Hotel */}
+                        <td className="px-3 py-3 sm:px-4 sm:py-3.5"><p className="text-xs text-slate-600 truncate sm:text-sm">{s.dept_name}</p></td>
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className={cn('h-2 w-2 rounded-full flex-shrink-0', HOTEL_DOT[s.hotel_id] ?? 'bg-slate-300')} />
-                            <p className="text-xs text-slate-600 truncate sm:text-sm">
-                              {s.hotel_name.replace('Grand Azure ', '').replace('Azure Boutique ', '')}
-                            </p>
+                            <p className="text-xs text-slate-600 truncate sm:text-sm">{s.hotel_name.replace('Grand Azure ', '').replace('Azure Boutique ', '')}</p>
                           </div>
                         </td>
-
-                        {/* Shift */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
-                          <span className={cn(
-                            'rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap sm:px-2.5 sm:py-1',
-                            SHIFT_COLORS[s.shift] ?? 'bg-slate-100 text-slate-500 border border-slate-200'
-                          )}>
+                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap sm:px-2.5 sm:py-1', SHIFT_COLORS[s.shift] ?? 'bg-slate-100 text-slate-500 border border-slate-200')}>
                             {SHIFT_LABELS[s.shift] ?? s.shift}
                           </span>
                         </td>
-
-                        {/* Salary */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
-                          <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-                            {formatCurrency(parseFloat(s.salary))}
-                          </p>
+                          <p className="text-xs font-semibold text-slate-700 sm:text-sm">{formatCurrency(parseFloat(s.salary))}</p>
                           <p className="text-[10px] text-slate-400">/mo</p>
                         </td>
-
-                        {/* Hired */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
                           <p className="text-xs text-slate-600 whitespace-nowrap sm:text-sm">
-                            {new Date(s.hire_date).toLocaleDateString('en-PK', {
-                              day: 'numeric', month: 'short', year: 'numeric'
-                            })}
+                            {new Date(s.hire_date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                         </td>
-
-                        {/* Status */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
-                          <span className={cn(
-                            'rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap sm:px-2.5 sm:py-1',
-                            s.is_active
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-600 border border-rose-200'
-                          )}>
+                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap sm:px-2.5 sm:py-1', s.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200')}>
                             {s.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-
-                        {/* More */}
                         <td className="px-3 py-3 sm:px-4 sm:py-3.5">
                           <button
                             onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setSelectedStaff(s); setShowDetail(true) }}
                             className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
-                          >
-                            <MoreHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
+                          ><MoreHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></button>
                         </td>
                       </motion.tr>
                     ))}
@@ -705,9 +548,7 @@ export default function StaffPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             <AnimatePresence mode="popLayout">
               {filtered.length === 0 ? (
-                <div className="col-span-full py-16 text-center text-sm text-slate-400">
-                  No staff members found
-                </div>
+                <div className="col-span-full py-16 text-center text-sm text-slate-400">No staff members found</div>
               ) : filtered.map((s, i) => (
                 <motion.div
                   key={s.staff_id}
@@ -716,61 +557,35 @@ export default function StaffPage() {
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ delay: Math.min(i * 0.035, 0.35) }}
                   onClick={() => { setSelectedStaff(s); setShowDetail(true) }}
-                  className={cn(
-                    'group cursor-pointer rounded-2xl bg-white border shadow-premium p-3 sm:p-4',
-                    'transition-all hover:-translate-y-0.5 hover:shadow-lg',
-                    'border-l-4 border-slate-100',
-                    HOTEL_ACCENT[s.hotel_id] ?? 'border-l-slate-200'
-                  )}
+                  className={cn('group cursor-pointer rounded-2xl bg-white border shadow-premium p-3 sm:p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg border-l-4 border-slate-100', HOTEL_ACCENT[s.hotel_id] ?? 'border-l-slate-200')}
                 >
-                  {/* Header: initials + name text only */}
                   <div className="flex items-start gap-2 mb-3 sm:gap-3">
-                    <div className={cn(
-                      'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-xs font-bold sm:h-11 sm:w-11 sm:text-sm',
-                      getInitialsBg(`${s.first_name}${s.last_name}`)
-                    )}>
+                    <div className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-xs font-bold sm:h-11 sm:w-11 sm:text-sm', getInitialsBg(`${s.first_name}${s.last_name}`))}>
                       {getInitials(s.first_name, s.last_name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800 truncate leading-tight">
-                        {s.first_name} {s.last_name}
-                      </p>
+                      <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{s.first_name} {s.last_name}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5 sm:text-xs">{s.employee_code}</p>
                     </div>
-                    <span className={cn(
-                      'rounded-full px-1.5 py-0.5 text-[9px] font-semibold flex-shrink-0 sm:px-2 sm:text-[10px]',
-                      s.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'
-                    )}>
+                    <span className={cn('rounded-full px-1.5 py-0.5 text-[9px] font-semibold flex-shrink-0 sm:px-2 sm:text-[10px]', s.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600')}>
                       {s.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-
-                  {/* Role */}
                   <div className="mb-3">
                     <p className="text-xs font-medium text-slate-700 truncate sm:text-sm">{s.role_name}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
-                      <span className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[9px] font-medium sm:px-2 sm:text-[10px]',
-                        ROLE_CATEGORY_COLORS[s.role_category] ?? 'bg-slate-100 text-slate-500'
-                      )}>
+                      <span className={cn('rounded-full px-1.5 py-0.5 text-[9px] font-medium sm:px-2 sm:text-[10px]', ROLE_CATEGORY_COLORS[s.role_category] ?? 'bg-slate-100 text-slate-500')}>
                         {ROLE_CATEGORY_LABELS[s.role_category] ?? s.role_category}
                       </span>
-                      <span className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[9px] font-medium sm:px-2 sm:text-[10px]',
-                        SHIFT_COLORS[s.shift] ?? 'bg-slate-100 text-slate-500'
-                      )}>
+                      <span className={cn('rounded-full px-1.5 py-0.5 text-[9px] font-medium sm:px-2 sm:text-[10px]', SHIFT_COLORS[s.shift] ?? 'bg-slate-100 text-slate-500')}>
                         {SHIFT_LABELS[s.shift] ?? s.shift}
                       </span>
                     </div>
                   </div>
-
-                  {/* Info */}
                   <div className="space-y-1.5 border-t border-slate-50 pt-3">
                     <div className="flex items-center gap-2 text-[10px] text-slate-500 sm:text-xs">
                       <Building2 className="w-3 h-3 flex-shrink-0 text-slate-400" />
-                      <span className="truncate">
-                        {s.dept_name} · {s.hotel_name.replace('Grand Azure ', '').replace('Azure Boutique ', '')}
-                      </span>
+                      <span className="truncate">{s.dept_name} · {s.hotel_name.replace('Grand Azure ', '').replace('Azure Boutique ', '')}</span>
                     </div>
                     <div className="flex items-center gap-2 text-[10px] text-slate-500 sm:text-xs">
                       <DollarSign className="w-3 h-3 flex-shrink-0 text-slate-400" />
@@ -794,6 +609,7 @@ export default function StaffPage() {
         staff={selectedStaff}
         open={showDetail}
         onClose={() => { setShowDetail(false); setSelectedStaff(null) }}
+        onRefresh={handleRefreshAfterEdit}
       />
       <AddStaffModal
         open={showAdd}

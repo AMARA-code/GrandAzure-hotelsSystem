@@ -557,7 +557,7 @@ export default function AIChatbot() {
               </button>
             </div>
 
-            <div className="cbot-powered">Powered by Groq AI · Live hotel data</div>
+            <div className="cbot-powered">Get all your answers here</div>
           </div>
         )}
       </div>
