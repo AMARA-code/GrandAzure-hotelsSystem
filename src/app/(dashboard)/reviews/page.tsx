@@ -6,6 +6,7 @@ import {
   Star, Search, MessageSquare, Reply, Award, Building2,
   BarChart3, Smile, Meh, Frown, TrendingUp, Filter,
   CheckCircle2, Clock, RefreshCw, ChevronDown, Send, X,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
@@ -17,7 +18,7 @@ interface Review {
   review_id: number;
   hotel_id: number;
   guest_id: number;
-  overall_rating: number;       // stored as 1–10 in DB (guest rates 1–5 stars, multiplied by 2)
+  overall_rating: number;
   cleanliness_rating: number;
   service_rating: number;
   location_rating: number;
@@ -35,6 +36,15 @@ interface Review {
   hotel_name: string;
 }
 
+// One card groups all reviews from the same guest
+interface GuestReviewGroup {
+  guest_id: number;
+  first_name: string;
+  last_name: string;
+  is_verified: boolean;
+  reviews: Review[];
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 const hotelColor = (name: string): "azure" | "emerald" | "violet" =>
   name.includes("Karachi") ? "azure" : name.includes("Lahore") ? "emerald" : "violet";
@@ -42,8 +52,6 @@ const hotelColor = (name: string): "azure" | "emerald" | "violet" =>
 const hotelShort = (name: string): string =>
   name.includes("Karachi") ? "Karachi" : name.includes("Lahore") ? "Lahore" : "Islamabad";
 
-// Ratings are stored as 1–10 (guest picks 1–5 stars → saved as stars × 2).
-// 8–10 = Positive, 6–7 = Neutral, 1–5 = Negative
 const getSentiment = (r: number): "positive" | "neutral" | "negative" =>
   r >= 8 ? "positive" : r >= 6 ? "neutral" : "negative";
 
@@ -60,11 +68,27 @@ const PLATFORM_COLORS: Record<string, string> = {
   expedia:      "bg-yellow-50 text-yellow-700 border-yellow-200",
 };
 
+/** Group flat review array by guest_id, preserving sort order of first review */
+function groupByGuest(reviews: Review[]): GuestReviewGroup[] {
+  const map = new Map<number, GuestReviewGroup>();
+  for (const r of reviews) {
+    if (!map.has(r.guest_id)) {
+      map.set(r.guest_id, {
+        guest_id: r.guest_id,
+        first_name: r.first_name,
+        last_name: r.last_name,
+        is_verified: r.is_verified,
+        reviews: [],
+      });
+    }
+    map.get(r.guest_id)!.reviews.push(r);
+  }
+  return Array.from(map.values());
+}
+
 // ── StarRating ─────────────────────────────────────────────────────────────
-// Accepts a 1–10 DB value, maps it to 1–5 stars for display (÷ 2)
 function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
   const sz = size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
-  // Convert 1–10 scale → 1–5 stars
   const starValue = Math.round(rating / 2);
   return (
     <div className="flex gap-0.5">
@@ -83,7 +107,6 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
 
 // ── RatingBar ──────────────────────────────────────────────────────────────
 function RatingBar({ label, value }: { label: string; value: number }) {
-  // value is 1–10; scale bar to percentage out of 10
   const pct = (value / 10) * 100;
   return (
     <div className="flex items-center gap-2">
@@ -96,20 +119,18 @@ function RatingBar({ label, value }: { label: string; value: number }) {
           className="h-full rounded-full bg-gradient-to-r from-azure-400 to-azure-600"
         />
       </div>
-      {/* Show the raw value out of 10 */}
       <span className="text-xs font-semibold text-slate-700 w-8 shrink-0 text-right">{value}/10</span>
     </div>
   );
 }
 
-// ── ReviewCard ─────────────────────────────────────────────────────────────
-function ReviewCard({
+// ── SingleReviewPanel ──────────────────────────────────────────────────────
+// Renders one review's details inside the grouped card
+function SingleReviewPanel({
   review,
-  index,
   onReplySubmit,
 }: {
   review: Review;
-  index: number;
   onReplySubmit: (id: number, text: string) => Promise<void>;
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
@@ -119,23 +140,12 @@ function ReviewCard({
 
   const color     = hotelColor(review.hotel_name);
   const sentiment = getSentiment(review.overall_rating);
-  const initials  = `${review.first_name[0]}${review.last_name[0]}`;
   const isLong    = review.review_text.length > 110;
-
-  const avatarGrad =
-    color === "azure"   ? "from-azure-400 to-azure-600"
-    : color === "emerald" ? "from-emerald-400 to-emerald-600"
-    : "from-violet-400 to-violet-600";
 
   const hotelBadgeCls =
     color === "azure"   ? "bg-azure-50 text-azure-700 border-azure-200"
     : color === "emerald" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : "bg-violet-50 text-violet-700 border-violet-200";
-
-  const accentBar =
-    color === "azure"   ? "gradient-azure"
-    : color === "emerald" ? "bg-gradient-to-r from-emerald-400 to-emerald-600"
-    : "bg-gradient-to-r from-violet-400 to-violet-600";
 
   const sentimentConfig: Record<
     "positive" | "neutral" | "negative",
@@ -156,167 +166,280 @@ function ReviewCard({
   };
 
   return (
+    <div className="flex flex-col gap-3">
+      {/* Branch + platform + rating + date */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1">
+          <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border", hotelBadgeCls)}>
+            {hotelShort(review.hotel_name)}
+          </span>
+          <span className={cn(
+            "text-[10px] font-medium px-2 py-0.5 rounded-full border",
+            PLATFORM_COLORS[review.platform] ?? "bg-slate-50 text-slate-600 border-slate-200"
+          )}>
+            {PLATFORM_LABEL[review.platform] ?? review.platform}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <StarRating rating={review.overall_rating} size="sm" />
+          <span className="text-xs font-bold text-slate-700">{review.overall_rating}/10</span>
+          <span className="text-[10px] text-slate-400">
+            · {format(new Date(review.created_at), "dd MMM yyyy")}
+          </span>
+        </div>
+      </div>
+
+      {/* Review text */}
+      <div>
+        <h4 className="font-semibold text-slate-800 text-sm mb-1">{review.title}</h4>
+        <p className={cn("text-sm text-slate-500 leading-relaxed", !expanded && "line-clamp-2")}>
+          {review.review_text}
+        </p>
+        {isLong && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-azure-500 hover:text-azure-700 mt-0.5 font-medium"
+          >
+            {expanded ? "Show less" : "Read more"}
+          </button>
+        )}
+      </div>
+
+      {/* Sub-ratings */}
+      <div className="bg-slate-50/70 rounded-xl p-3 space-y-2">
+        <RatingBar label="Cleanliness" value={review.cleanliness_rating} />
+        <RatingBar label="Service"     value={review.service_rating} />
+        <RatingBar label="Location"    value={review.location_rating} />
+        <RatingBar label="Value"       value={review.value_rating} />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between">
+        <span className={cn(
+          "flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize",
+          sentimentConfig[sentiment].cls
+        )}>
+          {sentimentConfig[sentiment].icon} {sentiment}
+        </span>
+        <button
+          onClick={() => setShowReplyInput(!showReplyInput)}
+          className="flex items-center gap-1.5 text-xs font-medium text-azure-600 hover:text-azure-800 transition-colors"
+        >
+          <Reply className="w-3.5 h-3.5" />
+          {review.response_text ? "View Reply" : "Reply"}
+        </button>
+      </div>
+
+      {/* Existing reply */}
+      <AnimatePresence>
+        {review.response_text && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-azure-50 border border-azure-100 rounded-xl p-3"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 gradient-azure rounded-full flex items-center justify-center shrink-0">
+                <Building2 className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-azure-700">Management Response</span>
+              {review.responded_at && (
+                <span className="text-[10px] text-slate-400 ml-auto">
+                  {format(new Date(review.responded_at), "dd MMM yyyy")}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">{review.response_text}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reply input */}
+      <AnimatePresence>
+        {showReplyInput && !review.response_text && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <textarea
+              value={replyText}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyText(e.target.value)}
+              placeholder="Write a management response..."
+              rows={3}
+              className="w-full text-sm border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-azure-200 resize-none"
+            />
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => setShowReplyInput(false)}
+                className="text-xs px-3 py-1.5 text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !replyText.trim()}
+                className="flex items-center gap-1.5 text-xs px-4 py-1.5 gradient-azure text-white rounded-lg font-medium disabled:opacity-50"
+              >
+                {submitting
+                  ? <RefreshCw className="w-3 h-3 animate-spin" />
+                  : <Send className="w-3 h-3" />
+                }
+                Post Reply
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── GuestReviewCard ────────────────────────────────────────────────────────
+// One card per guest; if they reviewed multiple branches, tabs appear at the top
+function GuestReviewCard({
+  group,
+  index,
+  onReplySubmit,
+}: {
+  group: GuestReviewGroup;
+  index: number;
+  onReplySubmit: (id: number, text: string) => Promise<void>;
+}) {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const { reviews } = group;
+  const activeReview = reviews[activeTab];
+
+  // Accent color driven by the currently-visible review's hotel
+  const color = hotelColor(activeReview.hotel_name);
+
+  const avatarGrad =
+    color === "azure"   ? "from-azure-400 to-azure-600"
+    : color === "emerald" ? "from-emerald-400 to-emerald-600"
+    : "from-violet-400 to-violet-600";
+
+  const accentBar =
+    color === "azure"   ? "gradient-azure"
+    : color === "emerald" ? "bg-gradient-to-r from-emerald-400 to-emerald-600"
+    : "bg-gradient-to-r from-violet-400 to-violet-600";
+
+  const tabActiveCls = (r: Review) => {
+    const c = hotelColor(r.hotel_name);
+    return c === "azure"
+      ? "bg-azure-50 text-azure-700 border-azure-300"
+      : c === "emerald"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+      : "bg-violet-50 text-violet-700 border-violet-300";
+  };
+
+  const initials = `${group.first_name[0]}${group.last_name[0]}`;
+
+  return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.055, duration: 0.4 }}
       className="bg-white rounded-2xl border border-slate-100 shadow-premium hover:shadow-premium-lg transition-shadow duration-300 overflow-hidden flex flex-col"
     >
-      {/* Accent strip */}
+      {/* Accent strip — reacts to active tab's hotel */}
       <div className={cn("h-[3px] w-full shrink-0", accentBar)} />
 
       <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
 
-        {/* ── Header ── */}
+        {/* ── Guest header ── */}
         <div className="flex items-start gap-3">
-          {/* Avatar */}
           <div className={cn(
             "w-9 h-9 rounded-full shrink-0 flex items-center justify-center",
             "text-white text-sm font-bold bg-gradient-to-br", avatarGrad
           )}>
             {initials}
           </div>
-
-          {/* Name + badges */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+            <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
               <span className="font-semibold text-slate-800 text-sm leading-none">
-                {review.first_name} {review.last_name}
+                {group.first_name} {group.last_name}
               </span>
-              {review.is_verified && (
+              {group.is_verified && (
                 <span className="flex items-center gap-0.5 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full shrink-0">
                   <Award className="w-2.5 h-2.5" /> Verified
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1">
-              <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border", hotelBadgeCls)}>
-                {hotelShort(review.hotel_name)}
-              </span>
-              <span className={cn(
-                "text-[10px] font-medium px-2 py-0.5 rounded-full border",
-                PLATFORM_COLORS[review.platform] ?? "bg-slate-50 text-slate-600 border-slate-200"
-              )}>
-                {PLATFORM_LABEL[review.platform] ?? review.platform}
-              </span>
-            </div>
-          </div>
-
-          {/* Rating + date — shown as /10, stars mapped from /10 → /5 */}
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            <div className="flex items-center gap-1">
-              <StarRating rating={review.overall_rating} size="sm" />
-              <span className="text-xs font-bold text-slate-700">{review.overall_rating}/10</span>
-            </div>
-            <span className="text-[10px] text-slate-400">
-              {format(new Date(review.created_at), "dd MMM yyyy")}
-            </span>
+            <p className="text-[10px] text-slate-400">
+              {reviews.length} review{reviews.length > 1 ? "s" : ""} · {reviews.length > 1 ? "multiple branches" : hotelShort(reviews[0].hotel_name)}
+            </p>
           </div>
         </div>
 
-        {/* ── Review text ── */}
-        <div>
-          <h4 className="font-semibold text-slate-800 text-sm mb-1">{review.title}</h4>
-          <p className={cn("text-sm text-slate-500 leading-relaxed", !expanded && "line-clamp-2")}>
-            {review.review_text}
-          </p>
-          {isLong && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs text-azure-500 hover:text-azure-700 mt-0.5 font-medium"
-            >
-              {expanded ? "Show less" : "Read more"}
-            </button>
-          )}
-        </div>
-
-        {/* ── Sub-ratings ── */}
-        <div className="bg-slate-50/70 rounded-xl p-3 space-y-2">
-          <RatingBar label="Cleanliness" value={review.cleanliness_rating} />
-          <RatingBar label="Service"     value={review.service_rating} />
-          <RatingBar label="Location"    value={review.location_rating} />
-          <RatingBar label="Value"       value={review.value_rating} />
-        </div>
-
-        {/* ── Footer ── */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-50 mt-auto">
-          <span className={cn(
-            "flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize",
-            sentimentConfig[sentiment].cls
-          )}>
-            {sentimentConfig[sentiment].icon} {sentiment}
-          </span>
-          <button
-            onClick={() => setShowReplyInput(!showReplyInput)}
-            className="flex items-center gap-1.5 text-xs font-medium text-azure-600 hover:text-azure-800 transition-colors"
-          >
-            <Reply className="w-3.5 h-3.5" />
-            {review.response_text ? "View Reply" : "Reply"}
-          </button>
-        </div>
-
-        {/* ── Existing reply ── */}
-        <AnimatePresence>
-          {review.response_text && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-azure-50 border border-azure-100 rounded-xl p-3"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 gradient-azure rounded-full flex items-center justify-center shrink-0">
-                  <Building2 className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-xs font-semibold text-azure-700">Management Response</span>
-                {review.responded_at && (
-                  <span className="text-[10px] text-slate-400 ml-auto">
-                    {format(new Date(review.responded_at), "dd MMM yyyy")}
-                  </span>
+        {/* ── Branch tabs (only shown when guest reviewed multiple hotels) ── */}
+        {reviews.length > 1 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {reviews.map((r, i) => (
+              <button
+                key={r.review_id}
+                onClick={() => setActiveTab(i)}
+                className={cn(
+                  "text-[10px] font-medium px-2.5 py-1 rounded-full border transition-all",
+                  activeTab === i
+                    ? tabActiveCls(r)
+                    : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300"
                 )}
-              </div>
-              <p className="text-sm text-slate-600 leading-relaxed">{review.response_text}</p>
-            </motion.div>
-          )}
+              >
+                {hotelShort(r.hotel_name)}
+                {r.response_text && (
+                  <span className="ml-1 inline-block w-1.5 h-1.5 bg-emerald-400 rounded-full align-middle" title="Replied" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Divider between tabs and review ── */}
+        {reviews.length > 1 && (
+          <div className="border-t border-slate-50" />
+        )}
+
+        {/* ── Active review panel ── */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeReview.review_id}
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SingleReviewPanel
+              review={activeReview}
+              onReplySubmit={onReplySubmit}
+            />
+          </motion.div>
         </AnimatePresence>
 
-        {/* ── Reply input ── */}
-        <AnimatePresence>
-          {showReplyInput && !review.response_text && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+        {/* ── Tab navigation arrows (optional, for many branches) ── */}
+        {reviews.length > 2 && (
+          <div className="flex items-center justify-between pt-1">
+            <button
+              onClick={() => setActiveTab((t) => Math.max(0, t - 1))}
+              disabled={activeTab === 0}
+              className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors"
             >
-              <textarea
-                value={replyText}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyText(e.target.value)}
-                placeholder="Write a management response..."
-                rows={3}
-                className="w-full text-sm border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-azure-200 resize-none"
-              />
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  onClick={() => setShowReplyInput(false)}
-                  className="text-xs px-3 py-1.5 text-slate-500 hover:text-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || !replyText.trim()}
-                  className="flex items-center gap-1.5 text-xs px-4 py-1.5 gradient-azure text-white rounded-lg font-medium disabled:opacity-50"
-                >
-                  {submitting
-                    ? <RefreshCw className="w-3 h-3 animate-spin" />
-                    : <Send className="w-3 h-3" />
-                  }
-                  Post Reply
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </button>
+            <span className="text-[10px] text-slate-300">
+              {activeTab + 1} / {reviews.length}
+            </span>
+            <button
+              onClick={() => setActiveTab((t) => Math.min(reviews.length - 1, t + 1))}
+              disabled={activeTab === reviews.length - 1}
+              className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
       </div>
     </motion.div>
   );
@@ -324,14 +447,14 @@ function ReviewCard({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function ReviewsPage() {
-  const [reviews, setReviews]                     = useState<Review[]>([]);
-  const [loading, setLoading]                     = useState(true);
-  const [search, setSearch]                       = useState("");
-  const [hotelFilter, setHotelFilter]             = useState("all");
-  const [platformFilter, setPlatformFilter]       = useState("all");
-  const [sentimentFilter, setSentimentFilter]     = useState("all");
-  const [sortBy, setSortBy]                       = useState<"date" | "rating">("date");
-  const [showFilters, setShowFilters]             = useState(false);
+  const [reviews, setReviews]                 = useState<Review[]>([]);
+  const [loading, setLoading]                 = useState(true);
+  const [search, setSearch]                   = useState("");
+  const [hotelFilter, setHotelFilter]         = useState("all");
+  const [platformFilter, setPlatformFilter]   = useState("all");
+  const [sentimentFilter, setSentimentFilter] = useState("all");
+  const [sortBy, setSortBy]                   = useState<"date" | "rating">("date");
+  const [showFilters, setShowFilters]         = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -387,18 +510,17 @@ export default function ReviewsPage() {
   };
 
   // ── Derived stats ──
-  // avgRating is out of 10
   const avgRating = reviews.length
-    ? (reviews.reduce((s: number, r: Review) => s + r.overall_rating, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((s, r) => s + r.overall_rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
   const sentimentCounts = {
-    positive: reviews.filter((r: Review) => getSentiment(r.overall_rating) === "positive").length,
-    neutral:  reviews.filter((r: Review) => getSentiment(r.overall_rating) === "neutral").length,
-    negative: reviews.filter((r: Review) => getSentiment(r.overall_rating) === "negative").length,
+    positive: reviews.filter((r) => getSentiment(r.overall_rating) === "positive").length,
+    neutral:  reviews.filter((r) => getSentiment(r.overall_rating) === "neutral").length,
+    negative: reviews.filter((r) => getSentiment(r.overall_rating) === "negative").length,
   };
 
-  const repliedCount  = reviews.filter((r: Review) => r.response_text).length;
+  const repliedCount  = reviews.filter((r) => r.response_text).length;
   const responseRate  = reviews.length ? Math.round((repliedCount / reviews.length) * 100) : 0;
   const pendingCount  = reviews.length - repliedCount;
   const positiveRate  = reviews.length
@@ -410,39 +532,43 @@ export default function ReviewsPage() {
     { hotel_id: 2, hotel_name: "Grand Azure Lahore",       color: "emerald" },
     { hotel_id: 3, hotel_name: "Azure Boutique Islamabad", color: "violet"  },
   ].map((h) => {
-    const hr = reviews.filter((r: Review) => r.hotel_id === h.hotel_id);
+    const hr = reviews.filter((r) => r.hotel_id === h.hotel_id);
     return {
       ...h,
       total: hr.length,
       avg_rating: hr.length
-        ? parseFloat((hr.reduce((s: number, r: Review) => s + r.overall_rating, 0) / hr.length).toFixed(1))
+        ? parseFloat((hr.reduce((s, r) => s + r.overall_rating, 0) / hr.length).toFixed(1))
         : 0,
     };
   });
 
-  const platforms = [...new Set(reviews.map((r: Review) => r.platform))];
+  const platforms = [...new Set(reviews.map((r) => r.platform))];
 
-  // ── Filtered list ──
-  const filtered = reviews
-    .filter((r: Review) => {
-      if (hotelFilter !== "all" && r.hotel_id !== parseInt(hotelFilter)) return false;
-      if (platformFilter !== "all" && r.platform !== platformFilter) return false;
-      if (sentimentFilter !== "all" && getSentiment(r.overall_rating) !== sentimentFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !r.review_text.toLowerCase().includes(q) &&
-          !r.title.toLowerCase().includes(q) &&
-          !`${r.first_name} ${r.last_name}`.toLowerCase().includes(q)
-        ) return false;
-      }
-      return true;
-    })
-    .sort((a: Review, b: Review) =>
-      sortBy === "rating"
-        ? b.overall_rating - a.overall_rating
-        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+  // ── Filter individual reviews first, then group ──
+  const filteredReviews = reviews.filter((r) => {
+    if (hotelFilter !== "all" && r.hotel_id !== parseInt(hotelFilter)) return false;
+    if (platformFilter !== "all" && r.platform !== platformFilter) return false;
+    if (sentimentFilter !== "all" && getSentiment(r.overall_rating) !== sentimentFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !r.review_text.toLowerCase().includes(q) &&
+        !r.title.toLowerCase().includes(q) &&
+        !`${r.first_name} ${r.last_name}`.toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
+  // Sort individual reviews before grouping so tabs are ordered correctly
+  const sortedReviews = [...filteredReviews].sort((a, b) =>
+    sortBy === "rating"
+      ? b.overall_rating - a.overall_rating
+      : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // Group by guest — preserves outer sort order (first review of each guest determines card position)
+  const guestGroups = groupByGuest(sortedReviews);
 
   const hasFilters =
     hotelFilter !== "all" || platformFilter !== "all" ||
@@ -470,7 +596,6 @@ export default function ReviewsPage() {
               </p>
             </div>
           </div>
-          {/* Average shown out of 10 */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-premium border border-slate-100 self-start xs:self-auto shrink-0">
             <Star className="w-4 h-4 sm:w-5 sm:h-5 text-gold-500 fill-gold-500" />
             <span className="text-xl sm:text-2xl font-bold text-slate-800">{avgRating}</span>
@@ -554,7 +679,6 @@ export default function ReviewsPage() {
                     <p className="text-[11px] text-slate-400 truncate pr-2">{hotel.hotel_name}</p>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl sm:text-3xl font-bold text-slate-800">{hotel.avg_rating}</span>
-                      {/* Correctly labelled /10 */}
                       <span className="text-xs text-slate-400">/10</span>
                     </div>
                   </div>
@@ -562,7 +686,6 @@ export default function ReviewsPage() {
                     <Star className="w-4 h-4 text-white fill-white" />
                   </div>
                 </div>
-                {/* StarRating handles /10 → /5 star conversion internally */}
                 <StarRating rating={hotel.avg_rating} size="sm" />
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
                   <span className="text-xs text-slate-400">{hotel.total} review{hotel.total !== 1 ? "s" : ""}</span>
@@ -619,7 +742,6 @@ export default function ReviewsPage() {
 
         {/* FILTERS */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
-          {/* Search row */}
           <div className="flex gap-2 sm:gap-3 mb-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -651,7 +773,6 @@ export default function ReviewsPage() {
             </button>
           </div>
 
-          {/* Filter dropdowns */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
@@ -686,10 +807,9 @@ export default function ReviewsPage() {
                   className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-azure-200 flex-1 min-w-[130px]"
                 >
                   <option value="all">All Sentiments</option>
-                  {/* Labels match the /10 scale */}
-                  <option value="positive">Positive (8–10 ✦✦✦✦✦)</option>
-                  <option value="neutral">Neutral (6–7 ✦✦✦)</option>
-                  <option value="negative">Negative (1–5 ✦✦)</option>
+                  <option value="positive">Positive (8–10)</option>
+                  <option value="neutral">Neutral (6–7)</option>
+                  <option value="negative">Negative (1–5)</option>
                 </select>
                 <select
                   value={sortBy}
@@ -703,11 +823,13 @@ export default function ReviewsPage() {
             )}
           </AnimatePresence>
 
-          {/* Count + clear */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-400">
-              Showing <span className="font-semibold text-slate-600">{filtered.length}</span> of{" "}
-              <span className="font-semibold text-slate-600">{reviews.length}</span> reviews
+              Showing <span className="font-semibold text-slate-600">{guestGroups.length}</span> guest
+              {guestGroups.length !== 1 ? "s" : ""}{" "}
+              <span className="text-slate-300">·</span>{" "}
+              <span className="font-semibold text-slate-600">{filteredReviews.length}</span> review
+              {filteredReviews.length !== 1 ? "s" : ""}
             </p>
             {hasFilters && (
               <button
@@ -725,13 +847,13 @@ export default function ReviewsPage() {
           </div>
         </motion.div>
 
-        {/* REVIEWS GRID */}
+        {/* REVIEWS GRID — grouped by guest */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <RefreshCw className="w-6 h-6 text-azure-400 animate-spin" />
             <span className="text-slate-400 text-sm">Loading reviews...</span>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : guestGroups.length === 0 ? (
           <div className="text-center py-16 sm:py-20">
             <MessageSquare className="w-12 h-12 mx-auto mb-3 text-slate-200" />
             <p className="text-slate-500 font-medium">No reviews match your filters</p>
@@ -740,10 +862,10 @@ export default function ReviewsPage() {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
-              {filtered.map((review: Review, i: number) => (
-                <ReviewCard
-                  key={review.review_id}
-                  review={review}
+              {guestGroups.map((group, i) => (
+                <GuestReviewCard
+                  key={group.guest_id}
+                  group={group}
                   index={i}
                   onReplySubmit={handleReplySubmit}
                 />
