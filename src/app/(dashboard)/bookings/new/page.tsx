@@ -321,7 +321,7 @@ export default function NewBookingPage() {
     try {
       const supabase = createClient()
 
-      // Guest upsert
+      // ── Guest upsert ───────────────────────────────────────────────────────
       const { data: existingGuest, error: guestLookupError } = await supabase
         .from('guests')
         .select('guest_id')
@@ -373,7 +373,29 @@ export default function NewBookingPage() {
         guestIdNum = inserted.guest_id
       }
 
-      // Booking insert
+      // ── Duplicate branch check ─────────────────────────────────────────────
+      // Prevent the same guest from having overlapping bookings at different branches
+      const { data: conflictingBooking } = await supabase
+        .from('bookings')
+        .select('booking_id, hotel_id, check_in_date, check_out_date')
+        .eq('guest_id', guestIdNum)
+        .neq('hotel_id', hotelIdNum)
+        .not('booking_status', 'in', '("cancelled","no_show","checked_out")')
+        .lt('check_in_date', form.check_out_date)
+        .gt('check_out_date', form.check_in_date)
+        .maybeSingle()
+
+      if (conflictingBooking) {
+        toast.error(
+          `This guest already has a booking at another branch from ${conflictingBooking.check_in_date} to ${conflictingBooking.check_out_date}. A guest cannot be at two branches simultaneously.`,
+          { duration: 6000 }
+        )
+        setLoading(false)
+        return
+      }
+      // ── End duplicate branch check ─────────────────────────────────────────
+
+      // ── Booking insert ─────────────────────────────────────────────────────
       const ratePerNight  = Number(selectedRoomType.base_price)
       const subtotal      = ratePerNight * nights
       const taxAmount     = Math.round(subtotal * 0.16)
@@ -412,17 +434,17 @@ export default function NewBookingPage() {
       if (error) {
         // Surface every part of the Supabase error so you can diagnose immediately
         const detail = [
-          error.code    ? `code: ${error.code}`     : null,
-          error.message ? error.message              : null,
+          error.code    ? `code: ${error.code}`       : null,
+          error.message ? error.message                : null,
           error.details ? `details: ${error.details}` : null,
-          error.hint    ? `hint: ${error.hint}`      : null,
+          error.hint    ? `hint: ${error.hint}`        : null,
         ].filter(Boolean).join(' | ')
 
         console.error('[NewBooking] bookings insert failed:', error)
         throw new Error(detail || 'Booking insert failed — check browser console for full error object')
       }
 
-      // Room assignment (best-effort — non-fatal if no room available)
+      // ── Room assignment (best-effort — non-fatal if no room available) ─────
       const { data: availableRoom } = await supabase
         .from('rooms')
         .select('room_id')

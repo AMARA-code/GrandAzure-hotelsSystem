@@ -7,7 +7,7 @@ import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { useBooking } from '@/lib/hooks/useBookings'
+import { useBooking, autoTransitionBookings } from '@/lib/hooks/useBookings'
 import { formatCurrency } from '@/lib/utils/formatters'
 
 export default function EditBookingPage() {
@@ -105,6 +105,28 @@ export default function EditBookingPage() {
         return
       }
 
+      // ── Recalculate correct status based on new dates ──────────────────────
+      // If staff changed dates, recompute what the status SHOULD be
+      // so it stays in sync automatically — no manual status change needed.
+      const today = new Date().toISOString().split('T')[0]
+      let resolvedStatus = form.booking_status
+
+      // Only auto-correct if staff hasn't manually picked a terminal status
+      const terminalStatuses = ['cancelled', 'no_show']
+      if (!terminalStatuses.includes(form.booking_status)) {
+        if (form.check_in_date > today) {
+          // Future booking → always confirmed
+          resolvedStatus = 'confirmed'
+        } else if (form.check_in_date <= today && form.check_out_date > today) {
+          // Currently mid-stay → checked_in
+          resolvedStatus = 'checked_in'
+        } else if (form.check_out_date <= today) {
+          // Past stay → checked_out
+          resolvedStatus = 'checked_out'
+        }
+      }
+      // ── End auto status recalculation ──────────────────────────────────────
+
       // Update booking
       const { error: bookingErr } = await supabase
         .from('bookings')
@@ -116,7 +138,7 @@ export default function EditBookingPage() {
           total_nights:     nights,
           total_amount:     total,
           tax_amount:       tax,
-          booking_status:   form.booking_status,
+          booking_status:   resolvedStatus,
           special_requests: form.special_requests || null,
         })
         .eq('booking_id', id)
@@ -149,6 +171,11 @@ export default function EditBookingPage() {
 
         if (guestErr) throw guestErr
       }
+
+      // ── Run auto-transition after save to sync ALL bookings & rooms ────────
+      // This ensures room statuses stay accurate system-wide after any date edit
+      await autoTransitionBookings()
+      // ── End auto-transition ────────────────────────────────────────────────
 
       toast.success('Booking and guest profile updated!')
       router.push(`/bookings/${id}`)
@@ -398,6 +425,9 @@ export default function EditBookingPage() {
                 />
               </div>
             </div>
+            <p className="text-xs text-slate-400 mt-2">
+              Status will auto-update based on the new dates when you save.
+            </p>
           </div>
 
           {/* ── Guest Count ── */}
@@ -447,6 +477,9 @@ export default function EditBookingPage() {
               <option value="cancelled">Cancelled</option>
               <option value="no_show">No Show</option>
             </select>
+            <p className="text-xs text-slate-400 mt-2">
+              Manually override only for cancelled or no-show. Otherwise status auto-corrects based on dates.
+            </p>
           </div>
 
           {/* ── Special Requests ── */}
