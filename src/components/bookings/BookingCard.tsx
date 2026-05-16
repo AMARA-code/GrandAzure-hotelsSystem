@@ -39,6 +39,11 @@ export default function BookingCard({ booking, index }: BookingCardProps) {
   const hotelId     = booking.hotel?.hotel_id ?? 1
   const accent      = hotelAccents[hotelId] ?? hotelAccents[1]
 
+  const bookingTotal = Number(booking.total_amount ?? 0)
+  const rawPaid      = Number(booking.paid_amount ?? 0)
+  const paidShown    = bookingTotal > 0 ? Math.min(rawPaid, bookingTotal) : rawPaid
+  const balanceDue   = Math.max(0, bookingTotal - paidShown)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -138,13 +143,28 @@ export default function BookingCard({ booking, index }: BookingCardProps) {
             )}>
               {booking.channel?.channel_name ?? 'Direct'}
             </span>
-            <div className="text-right">
-              <p className="text-base font-bold text-slate-900">
-                {booking.total_amount > 0
-                  ? formatCurrency(booking.total_amount)
-                  : <span className="text-slate-400 text-sm">No amount set</span>
-                }
-              </p>
+            <div className="text-right space-y-0.5">
+              {bookingTotal > 0 ? (
+                <>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    Total / Paid
+                  </p>
+                  <p className="text-base font-bold text-slate-900 leading-tight">
+                    {formatCurrency(bookingTotal)}
+                    <span className="text-slate-300 font-normal mx-1">·</span>
+                    <span className={paidShown < bookingTotal ? 'text-azure-600' : 'text-emerald-600'}>
+                      {formatCurrency(paidShown)}
+                    </span>
+                  </p>
+                  {balanceDue > 0 && (
+                    <p className="text-[11px] text-amber-700 font-medium">
+                      Due {formatCurrency(balanceDue)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-slate-400 text-sm">No amount set</p>
+              )}
               {booking.booking_rooms?.[0]?.rate_per_night > 0 && (
                 <p className="text-xs text-slate-400">
                   {formatCurrency(booking.booking_rooms[0].rate_per_night)}/night

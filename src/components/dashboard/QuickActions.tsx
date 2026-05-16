@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
   CalendarPlus, BedDouble, Sparkles,
-  Wrench, Receipt, Users
+  Wrench, Users
 } from 'lucide-react'
 
 const actions = [
@@ -37,14 +37,6 @@ const actions = [
     href: '/maintenance',
     icon: Wrench,
     gradient: 'bg-rose-500',
-    shadow: '',
-    text: 'text-white',
-  },
-  {
-    label: 'Finance',
-    href: '/finance',
-    icon: Receipt,
-    gradient: 'bg-violet-500',
     shadow: '',
     text: 'text-white',
   },

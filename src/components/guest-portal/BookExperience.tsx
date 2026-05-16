@@ -52,6 +52,14 @@ const roomImageMap: Record<string, string> = {
   'Margalla View Deluxe': '/images/rooms/margalla-view-deluxe.jpg',
 }
 
+function localTodayYMD(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export default function BookExperience({
   hotels,
   roomTypes,
@@ -78,7 +86,20 @@ export default function BookExperience({
     adults: '2',
     children: '0',
     specialRequests: '',
+    guestFirstName: '',
+    guestLastName: '',
   })
+
+  const todayYMD = useMemo(() => localTodayYMD(), [])
+  const checkoutMin = useMemo(() => {
+    if (!bookingForm.checkIn) return todayYMD
+    const [y, m, d] = bookingForm.checkIn.split('-').map(Number)
+    const next = new Date(y, m - 1, d + 1)
+    const yy = next.getFullYear()
+    const mm = String(next.getMonth() + 1).padStart(2, '0')
+    const dd = String(next.getDate()).padStart(2, '0')
+    return `${yy}-${mm}-${dd}`
+  }, [bookingForm.checkIn, todayYMD])
 
   const hotelMap = useMemo(() => new Map(hotels.map((hotel) => [hotel.hotel_id, hotel])), [hotels])
   const categories = useMemo(() => Array.from(new Set(roomTypes.map((room) => room.type_category))), [roomTypes])
@@ -97,6 +118,50 @@ export default function BookExperience({
   }, [filteredRooms])
 
   const activeOffers = useMemo(() => seasonalPricing.slice(0, 4), [seasonalPricing])
+
+  useEffect(() => {
+    if (!isAuthenticated || !userEmail) return
+    let cancelled = false
+    const run = async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('guests')
+        .select('first_name, last_name')
+        .eq('email', userEmail)
+        .maybeSingle()
+      if (cancelled || !data) return
+      setBookingForm((prev) => ({
+        ...prev,
+        guestFirstName: data.first_name ?? '',
+        guestLastName: data.last_name ?? '',
+      }))
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, userEmail])
+
+  const resetBookingForm = () =>
+    setBookingForm({
+      checkIn: '',
+      checkOut: '',
+      adults: '2',
+      children: '0',
+      specialRequests: '',
+      guestFirstName: '',
+      guestLastName: '',
+    })
+
+  const clearStayFieldsOnly = () =>
+    setBookingForm((prev) => ({
+      ...prev,
+      checkIn: '',
+      checkOut: '',
+      specialRequests: '',
+      adults: '2',
+      children: '0',
+    }))
 
   const bookingTicker = [
     'Free welcome drink on arrival',
@@ -124,6 +189,21 @@ export default function BookExperience({
       return
     }
 
+    if (bookingForm.checkIn < todayYMD) {
+      toast.error('Check-in must be today or a future date.')
+      return
+    }
+
+    if (bookingForm.checkOut <= bookingForm.checkIn) {
+      toast.error('Check-out must be after check-in.')
+      return
+    }
+
+    if (!bookingForm.guestFirstName.trim() || !bookingForm.guestLastName.trim()) {
+      toast.error('Please enter the guest first and last name.')
+      return
+    }
+
     setLoading(true)
     const supabase = createClient()
 
@@ -138,8 +218,8 @@ export default function BookExperience({
         const { data: newGuest, error: guestInsertError } = await supabase
           .from('guests')
           .insert({
-            first_name: 'Guest',
-            last_name: 'User',
+            first_name: bookingForm.guestFirstName.trim(),
+            last_name: bookingForm.guestLastName.trim(),
             email: userEmail,
             phone: '+92-000-0000000',
             vip_status: 'none',
@@ -153,6 +233,14 @@ export default function BookExperience({
           return
         }
         guest = newGuest
+      } else {
+        await supabase
+          .from('guests')
+          .update({
+            first_name: bookingForm.guestFirstName.trim(),
+            last_name: bookingForm.guestLastName.trim(),
+          })
+          .eq('guest_id', guest.guest_id)
       }
 
       const ratePlan = ratePlans.find((plan) => plan.hotel_id === selectedRoom.hotel_id) ?? ratePlans[0]
@@ -216,7 +304,7 @@ export default function BookExperience({
 
       toast.success(`Booking confirmed (${confirmationNo})`)
       setSelectedRoom(null)
-      setBookingForm({ checkIn: '', checkOut: '', adults: '2', children: '0', specialRequests: '' })
+      resetBookingForm()
       router.push('/my-account')
       router.refresh()
     } finally {
@@ -562,19 +650,62 @@ export default function BookExperience({
                 <h3 className="font-display text-2xl font-bold text-stone-900">{selectedRoom.type_name}</h3>
                 <p className="text-sm text-stone-600">{hotelMap.get(selectedRoom.hotel_id)?.hotel_name}</p>
               </div>
-              <button onClick={() => setSelectedRoom(null)} className="rounded-xl border border-[#ead8c4] p-2 text-stone-500">
+              <button onClick={() => { setSelectedRoom(null); clearStayFieldsOnly() }} className="rounded-xl border border-[#ead8c4] p-2 text-stone-500">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 text-sm sm:col-span-2">
+                <span className="font-medium text-stone-700">Guest first name</span>
+                <input
+                  type="text"
+                  autoComplete="given-name"
+                  className="w-full rounded-xl border border-[#e7d6c3] bg-[#fffdf9] px-3 py-2"
+                  value={bookingForm.guestFirstName}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, guestFirstName: e.target.value }))}
+                  placeholder="Legal first name"
+                  required
+                />
+              </label>
+              <label className="space-y-2 text-sm sm:col-span-2">
+                <span className="font-medium text-stone-700">Guest last name</span>
+                <input
+                  type="text"
+                  autoComplete="family-name"
+                  className="w-full rounded-xl border border-[#e7d6c3] bg-[#fffdf9] px-3 py-2"
+                  value={bookingForm.guestLastName}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, guestLastName: e.target.value }))}
+                  placeholder="Legal last name"
+                  required
+                />
+              </label>
               <label className="space-y-2 text-sm">
                 <span className="font-medium text-stone-700">Check-in</span>
-                <input type="date" className="w-full rounded-xl border border-[#e7d6c3] bg-[#fffdf9] px-3 py-2" value={bookingForm.checkIn} onChange={(e) => setBookingForm((prev) => ({ ...prev, checkIn: e.target.value }))} />
+                <input
+                  type="date"
+                  min={todayYMD}
+                  className="w-full rounded-xl border border-[#e7d6c3] bg-[#fffdf9] px-3 py-2"
+                  value={bookingForm.checkIn}
+                  onChange={(e) => {
+                    const nextIn = e.target.value
+                    setBookingForm((prev) => {
+                      let nextOut = prev.checkOut
+                      if (nextOut && nextOut <= nextIn) nextOut = ''
+                      return { ...prev, checkIn: nextIn, checkOut: nextOut }
+                    })
+                  }}
+                />
               </label>
               <label className="space-y-2 text-sm">
                 <span className="font-medium text-stone-700">Check-out</span>
-                <input type="date" className="w-full rounded-xl border border-[#e7d6c3] bg-[#fffdf9] px-3 py-2" value={bookingForm.checkOut} onChange={(e) => setBookingForm((prev) => ({ ...prev, checkOut: e.target.value }))} />
+                <input
+                  type="date"
+                  min={checkoutMin}
+                  className="w-full rounded-xl border border-[#e7d6c3] bg-[#fffdf9] px-3 py-2"
+                  value={bookingForm.checkOut}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, checkOut: e.target.value }))}
+                />
               </label>
               <label className="space-y-2 text-sm">
                 <span className="font-medium text-stone-700">Adults</span>

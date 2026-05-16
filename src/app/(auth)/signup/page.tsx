@@ -65,12 +65,27 @@ export default function SignupPage() {
       })
       if (error) { toast.error(error.message); return }
       if (data.user) {
-        await supabase.from('guests').insert({
-          first_name: form.firstName, last_name: form.lastName,
-          email: form.email, phone: form.phone, vip_status: 'none', marketing_opt_in: true,
-        })
+        const { data: guestRow, error: guestErr } = await supabase
+          .from('guests')
+          .insert({
+            first_name: form.firstName, last_name: form.lastName,
+            email: form.email, phone: form.phone, vip_status: 'none', marketing_opt_in: true,
+          })
+          .select('guest_id')
+          .single()
+        if (guestErr) {
+          toast.error(guestErr.message ?? 'Could not create guest profile.')
+          return
+        }
+        if (guestRow?.guest_id != null) {
+          await supabase.auth.updateUser({
+            data: { guest_id: String(guestRow.guest_id) },
+          })
+        }
+        toast.success('Account created! Welcome to Grand Azure.')
+      } else {
+        toast.success('Account created! Welcome to Grand Azure.')
       }
-      toast.success('Account created! Welcome to Grand Azure.')
       router.push('/my-account')
       router.refresh()
     } finally { setLoading(false) }

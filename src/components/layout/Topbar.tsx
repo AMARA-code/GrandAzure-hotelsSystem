@@ -87,7 +87,7 @@ function notifBg(type: Notification['type']) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   PremiumAvatar
+   PremiumAvatar — FIXED: no horizontal line artifacts
 ───────────────────────────────────────────────────────────── */
 interface PremiumAvatarProps {
   size?: number
@@ -97,44 +97,86 @@ interface PremiumAvatarProps {
 }
 
 function PremiumAvatar({ size = 28, rounded = 'full', className, style }: PremiumAvatarProps) {
-  const s   = size
-  const cx  = s / 2
-  const cy  = s / 2
-  const r   = cx - 0.5
-
-  const radiiMap = { full: r, md: s * 0.22, lg: s * 0.28, xl: s * 0.34 }
-  const clipR    = radiiMap[rounded]
-  const uid = `av-${s}-${rounded}`
+  // Work in a fixed 100-unit coordinate space, scale via SVG viewBox
+  const V = 100
+  const cx = 50
+  const radiiMap = { full: 50, md: 22, lg: 28, xl: 34 }
+  const clipR = radiiMap[rounded]
+  const uid = `av-clip-${rounded}`
 
   return (
-    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className={className} style={style} aria-hidden="true">
+    <svg
+      width={size} height={size}
+      viewBox={`0 0 ${V} ${V}`}
+      className={className} style={style} aria-hidden="true"
+    >
       <defs>
         <clipPath id={uid}>
           {rounded === 'full'
-            ? <circle cx={cx} cy={cy} r={r} />
-            : <rect x={0} y={0} width={s} height={s} rx={clipR} />}
+            ? <circle cx={50} cy={50} r={49.5} />
+            : <rect x={0} y={0} width={100} height={100} rx={clipR} />}
         </clipPath>
       </defs>
-      <rect x={0} y={0} width={s} height={s} fill="#F5C9A8" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx} cy={s * 1.06} rx={s * 0.40} ry={s * 0.26} fill="#C4621A" clipPath={`url(#${uid})`} />
-      <path d={`M${cx - s*0.145} ${s*0.745}L${cx} ${s*0.875}L${cx+s*0.145} ${s*0.745}L${cx+s*0.115} ${s*0.67}L${cx} ${s*0.75}L${cx-s*0.115} ${s*0.67}Z`} fill="white" opacity={0.92} clipPath={`url(#${uid})`} />
-      <rect x={cx-s*0.10} y={s*0.575} width={s*0.20} height={s*0.22} rx={s*0.10} fill="#E8A87C" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx} cy={s*0.435} rx={s*0.305} ry={s*0.325} fill="#F0B080" clipPath={`url(#${uid})`} />
-      <path d={`M${cx-s*0.305} ${s*0.41}Q${cx-s*0.305} ${s*0.10} ${cx} ${s*0.10}Q${cx+s*0.305} ${s*0.10} ${cx+s*0.305} ${s*0.41}Q${cx+s*0.245} ${s*0.235} ${cx} ${s*0.235}Q${cx-s*0.245} ${s*0.235} ${cx-s*0.305} ${s*0.41}Z`} fill="#5C3A1A" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx-s*0.305} cy={s*0.45} rx={s*0.052} ry={s*0.082} fill="#E8A87C" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx+s*0.305} cy={s*0.45} rx={s*0.052} ry={s*0.082} fill="#E8A87C" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx-s*0.11} cy={s*0.445} rx={s*0.065} ry={s*0.062} fill="white" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx-s*0.11} cy={s*0.447} rx={s*0.042} ry={s*0.042} fill="#3D2008" clipPath={`url(#${uid})`} />
-      <circle cx={cx-s*0.088} cy={s*0.428} r={s*0.014} fill="white" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx+s*0.11} cy={s*0.445} rx={s*0.065} ry={s*0.062} fill="white" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx+s*0.11} cy={s*0.447} rx={s*0.042} ry={s*0.042} fill="#3D2008" clipPath={`url(#${uid})`} />
-      <circle cx={cx+s*0.132} cy={s*0.428} r={s*0.014} fill="white" clipPath={`url(#${uid})`} />
-      <path d={`M${cx-s*0.175} ${s*0.375}Q${cx-s*0.11} ${s*0.345}${cx-s*0.045} ${s*0.375}`} stroke="#5C3A1A" strokeWidth={s*0.038} fill="none" strokeLinecap="round" clipPath={`url(#${uid})`} />
-      <path d={`M${cx+s*0.045} ${s*0.375}Q${cx+s*0.11} ${s*0.345}${cx+s*0.175} ${s*0.375}`} stroke="#5C3A1A" strokeWidth={s*0.038} fill="none" strokeLinecap="round" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx} cy={s*0.535} rx={s*0.04} ry={s*0.026} fill="#D4895C" opacity={0.45} clipPath={`url(#${uid})`} />
-      <path d={`M${cx-s*0.125} ${s*0.585}Q${cx} ${s*0.635}${cx+s*0.125} ${s*0.585}`} stroke="#C06040" strokeWidth={s*0.030} fill="none" strokeLinecap="round" clipPath={`url(#${uid})`} />
-      <ellipse cx={cx-s*0.22} cy={s*0.52} rx={s*0.07} ry={s*0.045} fill="#E87050" opacity={0.13} clipPath={`url(#${uid})`} />
-      <ellipse cx={cx+s*0.22} cy={s*0.52} rx={s*0.07} ry={s*0.045} fill="#E87050" opacity={0.13} clipPath={`url(#${uid})`} />
+
+      {/* ── BG skin ── */}
+      <rect x={0} y={0} width={100} height={100} fill="#F5C4A0" clipPath={`url(#${uid})`} />
+
+      {/* ── Shirt / body ── */}
+      <ellipse cx={50} cy={105} rx={44} ry={30} fill="#B85A18" clipPath={`url(#${uid})`} />
+
+      {/* ── Collar left flap ── */}
+      <polygon points="50,100 35,65 50,65" fill="#FFFFFF" clipPath={`url(#${uid})`} />
+      {/* ── Collar right flap ── */}
+      <polygon points="50,100 65,65 50,65" fill="#FFFFFF" clipPath={`url(#${uid})`} />
+
+      {/* ── Neck ── */}
+      <rect x={42} y={59} width={16} height={14} rx={8} fill="#E8A87C" clipPath={`url(#${uid})`} />
+
+      {/* ── Face ── */}
+      <ellipse cx={50} cy={44} rx={30} ry={32} fill="#F0B080" clipPath={`url(#${uid})`} />
+
+      {/* ── Hair cap ── */}
+      <path
+        d="M20,42 Q20,10 50,10 Q80,10 80,42 Q74,24 50,24 Q26,24 20,42 Z"
+        fill="#5C3A1A" clipPath={`url(#${uid})`}
+      />
+
+      {/* ── Ears ── */}
+      <ellipse cx={20} cy={45} rx={5} ry={8} fill="#E8A87C" clipPath={`url(#${uid})`} />
+      <ellipse cx={80} cy={45} rx={5} ry={8} fill="#E8A87C" clipPath={`url(#${uid})`} />
+
+      {/* ── Left eyebrow — filled rounded rect, NOT a stroke ── */}
+      <rect x={24} y={33} width={14} height={3.5} rx={1.75} fill="#5C3A1A" clipPath={`url(#${uid})`} />
+      {/* ── Right eyebrow — filled rounded rect ── */}
+      <rect x={62} y={33} width={14} height={3.5} rx={1.75} fill="#5C3A1A" clipPath={`url(#${uid})`} />
+
+      {/* ── Left eye white ── */}
+      <ellipse cx={33} cy={44} rx={7} ry={6.5} fill="#FFFFFF" clipPath={`url(#${uid})`} />
+      {/* ── Left iris ── */}
+      <circle cx={33} cy={44} r={4.2} fill="#3D2008" clipPath={`url(#${uid})`} />
+      {/* ── Left eye shine ── */}
+      <circle cx={35} cy={42} r={1.4} fill="#FFFFFF" clipPath={`url(#${uid})`} />
+
+      {/* ── Right eye white ── */}
+      <ellipse cx={67} cy={44} rx={7} ry={6.5} fill="#FFFFFF" clipPath={`url(#${uid})`} />
+      {/* ── Right iris ── */}
+      <circle cx={67} cy={44} r={4.2} fill="#3D2008" clipPath={`url(#${uid})`} />
+      {/* ── Right eye shine ── */}
+      <circle cx={69} cy={42} r={1.4} fill="#FFFFFF" clipPath={`url(#${uid})`} />
+
+      {/* ── Nose — tiny filled ellipse, no stroke ── */}
+      <ellipse cx={50} cy={54} rx={3.5} ry={2.5} fill="#D4895C" opacity={0.5} clipPath={`url(#${uid})`} />
+
+      {/* ── Smile — filled arc shape instead of stroke ── */}
+      <path
+        d="M38,60 Q50,70 62,60 Q50,66 38,60 Z"
+        fill="#C06040" clipPath={`url(#${uid})`}
+      />
+
+      {/* ── Cheek blush left ── */}
+      <ellipse cx={24} cy={52} rx={7} ry={4.5} fill="#E87050" opacity={0.15} clipPath={`url(#${uid})`} />
+      {/* ── Cheek blush right ── */}
+      <ellipse cx={76} cy={52} rx={7} ry={4.5} fill="#E87050" opacity={0.15} clipPath={`url(#${uid})`} />
     </svg>
   )
 }
@@ -619,7 +661,6 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
 
   /* ── dismiss one ── */
   const handleDismiss = async (id: number) => {
-    // Optimistic update
     setNotifications((prev) => prev.filter((n) => n.notification_id !== id))
     try {
       const supabase = createClient()

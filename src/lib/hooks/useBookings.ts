@@ -53,6 +53,8 @@ export interface Booking {
       type_category: string
     }
   }[]
+  /** From linked invoice; capped in UI so paid never displays above booking total */
+  paid_amount?: number
 }
 
 export interface BookingFilters {
@@ -124,6 +126,10 @@ export function useBookings(filters: BookingFilters) {
               type_name,
               type_category
             )
+          ),
+          invoices (
+            paid_amount,
+            total_amount
           )
         `)
         .order('booking_id', { ascending: false })
@@ -171,6 +177,7 @@ export function useBookings(filters: BookingFilters) {
           room:           br.rooms,
           room_type:      br.room_types,
         })),
+        paid_amount:           (Array.isArray(b.invoices) ? b.invoices[0]?.paid_amount : (b.invoices as any)?.paid_amount) ?? 0,
       }))
 
       // Client-side search filter
@@ -266,6 +273,11 @@ export function useBooking(id: number) {
                 type_name,
                 type_category
               )
+            ),
+            invoices (
+              paid_amount,
+              total_amount,
+              balance_due
             )
           `)
           .eq('booking_id', id)
@@ -298,6 +310,7 @@ export function useBooking(id: number) {
             room:           br.rooms,
             room_type:      br.room_types,
           })),
+          paid_amount:           (Array.isArray((data as any).invoices) ? (data as any).invoices[0]?.paid_amount : (data as any).invoices?.paid_amount) ?? 0,
         })
       } catch (err) {
         console.error('Booking fetch error:', err)

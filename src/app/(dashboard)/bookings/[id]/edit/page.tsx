@@ -16,13 +16,28 @@ export default function EditBookingPage() {
   const id      = parseInt(params.id as string)
   const { booking, loading } = useBooking(id)
   const [saving, setSaving] = useState(false)
+
   const [form, setForm] = useState({
+    // Booking fields
     check_in_date:    '',
     check_out_date:   '',
     adults:           '1',
     children:         '0',
     special_requests: '',
     booking_status:   'confirmed',
+    // Guest fields
+    guest_first_name:    '',
+    guest_last_name:     '',
+    guest_email:         '',
+    guest_phone:         '',
+    guest_date_of_birth: '',
+    guest_gender:        '',
+    guest_nationality:   '',
+    guest_passport_no:   '',
+    guest_national_id:   '',
+    guest_address:       '',
+    guest_city:          '',
+    guest_country:       '',
   })
 
   useEffect(() => {
@@ -34,6 +49,18 @@ export default function EditBookingPage() {
         children:         String(booking.children),
         special_requests: booking.special_requests ?? '',
         booking_status:   booking.booking_status,
+        guest_first_name:    booking.guest?.first_name ?? '',
+        guest_last_name:     booking.guest?.last_name ?? '',
+        guest_email:         booking.guest?.email ?? '',
+        guest_phone:         booking.guest?.phone ?? '',
+        guest_date_of_birth: (booking.guest as any)?.date_of_birth ?? '',
+        guest_gender:        (booking.guest as any)?.gender ?? '',
+        guest_nationality:   (booking.guest as any)?.nationality ?? '',
+        guest_passport_no:   (booking.guest as any)?.passport_no ?? '',
+        guest_national_id:   (booking.guest as any)?.national_id ?? '',
+        guest_address:       (booking.guest as any)?.address_line1 ?? '',
+        guest_city:          (booking.guest as any)?.city ?? '',
+        guest_country:       (booking.guest as any)?.country ?? '',
       })
     }
   }, [booking])
@@ -63,7 +90,23 @@ export default function EditBookingPage() {
       const tax          = Math.round(subtotal * 0.16)
       const total        = subtotal + tax
 
-      const { error } = await supabase
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('paid_amount')
+        .eq('booking_id', id)
+        .maybeSingle()
+      const collected = Number(inv?.paid_amount ?? 0)
+
+      if (total + 0.009 < collected) {
+        toast.error(
+          `Booking total cannot be less than amount already collected (${formatCurrency(collected)}).`
+        )
+        setSaving(false)
+        return
+      }
+
+      // Update booking
+      const { error: bookingErr } = await supabase
         .from('bookings')
         .update({
           check_in_date:    form.check_in_date,
@@ -78,9 +121,36 @@ export default function EditBookingPage() {
         })
         .eq('booking_id', id)
 
-      if (error) throw error
+      if (bookingErr) throw bookingErr
 
-      toast.success('Booking updated successfully!')
+      // Update guest profile
+      if (booking?.guest?.guest_id) {
+        const guestDetails: Record<string, string | null> = {
+          first_name:   form.guest_first_name.trim() || null,
+          last_name:    form.guest_last_name.trim() || null,
+          phone:        form.guest_phone.trim() || null,
+          gender:       form.guest_gender || null,
+          nationality:  form.guest_nationality.trim() || null,
+          passport_no:  form.guest_passport_no.trim() || null,
+          national_id:  form.guest_national_id.trim() || null,
+          address_line1: form.guest_address.trim() || null,
+          city:         form.guest_city.trim() || null,
+          country:      form.guest_country.trim() || null,
+        }
+        // Only include date_of_birth if set
+        if (form.guest_date_of_birth) {
+          (guestDetails as any).date_of_birth = form.guest_date_of_birth
+        }
+
+        const { error: guestErr } = await supabase
+          .from('guests')
+          .update(guestDetails)
+          .eq('guest_id', booking.guest.guest_id)
+
+        if (guestErr) throw guestErr
+      }
+
+      toast.success('Booking and guest profile updated!')
       router.push(`/bookings/${id}`)
     } catch (err: any) {
       console.error(err)
@@ -90,7 +160,7 @@ export default function EditBookingPage() {
     }
   }
 
-  // Price preview calculation — safe with empty dates
+  // Price preview
   const checkIn      = form.check_in_date ? new Date(form.check_in_date) : null
   const checkOut     = form.check_out_date ? new Date(form.check_out_date) : null
   const nights       = checkIn && checkOut
@@ -160,30 +230,148 @@ export default function EditBookingPage() {
           className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-card p-8 space-y-6"
         >
 
-          {/* Guest — Read Only */}
+          {/* ── Guest Basic ── */}
           <div>
             <h2 className="font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
-              Guest
+              Guest — Basic Info
             </h2>
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="w-10 h-10 rounded-xl gradient-azure flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold">
-                  {booking.guest?.first_name?.[0]}{booking.guest?.last_name?.[0]}
-                </span>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>First Name</label>
+                <input
+                  type="text"
+                  value={form.guest_first_name}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_first_name: e.target.value }))}
+                  className={inputClass}
+                  placeholder="First name"
+                />
               </div>
               <div>
-                <p className="font-semibold text-slate-800">
-                  {booking.guest?.first_name} {booking.guest?.last_name}
-                </p>
-                <p className="text-xs text-slate-400">{booking.guest?.email}</p>
+                <label className={labelClass}>Last Name</label>
+                <input
+                  type="text"
+                  value={form.guest_last_name}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_last_name: e.target.value }))}
+                  className={inputClass}
+                  placeholder="Last name"
+                />
               </div>
-              <span className="ml-auto text-xs text-slate-400 bg-slate-200 px-2 py-1 rounded-lg">
-                Read only
-              </span>
+              <div>
+                <label className={labelClass}>Email</label>
+                <input
+                  type="email"
+                  value={form.guest_email}
+                  className={`${inputClass} opacity-60 cursor-not-allowed`}
+                  readOnly
+                />
+                <p className="text-xs text-slate-400 mt-1">Email cannot be changed</p>
+              </div>
+              <div>
+                <label className={labelClass}>Phone</label>
+                <input
+                  type="tel"
+                  placeholder="+92 300 1234567"
+                  value={form.guest_phone}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_phone: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Date of Birth</label>
+                <input
+                  type="date"
+                  value={form.guest_date_of_birth}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_date_of_birth: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Gender</label>
+                <select
+                  value={form.guest_gender}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_gender: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="">— Select —</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Stay Dates */}
+          {/* ── Guest Identity & Address ── */}
+          <div>
+            <h2 className="font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+              Guest — Identity & Address
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Nationality</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Pakistani"
+                  value={form.guest_nationality}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_nationality: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Passport No.</label>
+                <input
+                  type="text"
+                  placeholder="Passport number"
+                  value={form.guest_passport_no}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_passport_no: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>National ID (CNIC)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 35202-1234567-1"
+                  value={form.guest_national_id}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_national_id: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>City</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lahore"
+                  value={form.guest_city}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_city: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Country</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Pakistan"
+                  value={form.guest_country}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_country: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Address</label>
+                <input
+                  type="text"
+                  placeholder="Street address"
+                  value={form.guest_address}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_address: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Stay Dates ── */}
           <div>
             <h2 className="font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
               Stay Dates
@@ -194,7 +382,7 @@ export default function EditBookingPage() {
                 <input
                   type="date"
                   value={form.check_in_date}
-                  onChange={e => setForm(f => ({ ...f, check_in_date: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, check_in_date: e.target.value }))}
                   className={inputClass}
                   required
                 />
@@ -204,7 +392,7 @@ export default function EditBookingPage() {
                 <input
                   type="date"
                   value={form.check_out_date}
-                  onChange={e => setForm(f => ({ ...f, check_out_date: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, check_out_date: e.target.value }))}
                   className={inputClass}
                   required
                 />
@@ -212,7 +400,7 @@ export default function EditBookingPage() {
             </div>
           </div>
 
-          {/* Guest Count */}
+          {/* ── Guest Count ── */}
           <div>
             <h2 className="font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
               Guest Count
@@ -225,7 +413,7 @@ export default function EditBookingPage() {
                   min="1"
                   max="10"
                   value={form.adults}
-                  onChange={e => setForm(f => ({ ...f, adults: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, adults: e.target.value }))}
                   className={inputClass}
                 />
               </div>
@@ -236,21 +424,21 @@ export default function EditBookingPage() {
                   min="0"
                   max="10"
                   value={form.children}
-                  onChange={e => setForm(f => ({ ...f, children: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, children: e.target.value }))}
                   className={inputClass}
                 />
               </div>
             </div>
           </div>
 
-          {/* Status */}
+          {/* ── Status ── */}
           <div>
             <h2 className="font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
               Booking Status
             </h2>
             <select
               value={form.booking_status}
-              onChange={e => setForm(f => ({ ...f, booking_status: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, booking_status: e.target.value }))}
               className={inputClass}
             >
               <option value="confirmed">Confirmed</option>
@@ -261,21 +449,21 @@ export default function EditBookingPage() {
             </select>
           </div>
 
-          {/* Special Requests */}
+          {/* ── Special Requests ── */}
           <div>
             <h2 className="font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
               Special Requests
             </h2>
             <textarea
               value={form.special_requests}
-              onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, special_requests: e.target.value }))}
               placeholder="Any special requests or notes..."
               rows={3}
               className={inputClass}
             />
           </div>
 
-          {/* Buttons */}
+          {/* ── Buttons ── */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <Link
               href={`/bookings/${id}`}
@@ -302,7 +490,7 @@ export default function EditBookingPage() {
           </div>
         </motion.form>
 
-        {/* Price Preview */}
+        {/* Price Preview sidebar */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -315,27 +503,19 @@ export default function EditBookingPage() {
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Rate per night</span>
-                <span className="font-semibold text-slate-800">
-                  {formatCurrency(ratePerNight)}
-                </span>
+                <span className="font-semibold text-slate-800">{formatCurrency(ratePerNight)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Nights</span>
-                <span className="font-semibold text-slate-800">
-                  {nights > 0 ? nights : '—'}
-                </span>
+                <span className="font-semibold text-slate-800">{nights > 0 ? nights : '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Subtotal</span>
-                <span className="font-semibold text-slate-800">
-                  {nights > 0 ? formatCurrency(subtotal) : '—'}
-                </span>
+                <span className="font-semibold text-slate-800">{nights > 0 ? formatCurrency(subtotal) : '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Tax (16%)</span>
-                <span className="font-semibold text-slate-800">
-                  {nights > 0 ? formatCurrency(tax) : '—'}
-                </span>
+                <span className="font-semibold text-slate-800">{nights > 0 ? formatCurrency(tax) : '—'}</span>
               </div>
               <div className="border-t border-slate-100 pt-3 flex justify-between">
                 <span className="font-bold text-slate-900">Total</span>
@@ -375,15 +555,11 @@ export default function EditBookingPage() {
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">Original total</span>
-                <span className="font-semibold text-slate-700">
-                  {formatCurrency(booking.total_amount)}
-                </span>
+                <span className="font-semibold text-slate-700">{formatCurrency(booking.total_amount)}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">Original nights</span>
-                <span className="font-semibold text-slate-700">
-                  {booking.total_nights}
-                </span>
+                <span className="font-semibold text-slate-700">{booking.total_nights}</span>
               </div>
             </div>
           </div>

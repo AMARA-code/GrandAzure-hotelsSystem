@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
@@ -27,6 +27,12 @@ export default function AddPaymentPage() {
   const { booking, loading } = useBooking(id)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [invoiceRow, setInvoiceRow] = useState<{
+    invoice_id: number
+    paid_amount: number | null
+    total_amount: number | null
+    balance_due: number | null
+  } | null>(null)
   const [form, setForm] = useState({
     amount:         '',
     payment_method: 'cash',
@@ -34,10 +40,36 @@ export default function AddPaymentPage() {
     notes:          '',
   })
 
+  useEffect(() => {
+    if (!booking) return
+    const load = async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('invoices')
+        .select('invoice_id, paid_amount, total_amount, balance_due')
+        .eq('booking_id', id)
+        .maybeSingle()
+      setInvoiceRow(data ?? null)
+    }
+    load()
+  }, [booking, id])
+
+  const bookingTotal = Number(booking?.total_amount ?? 0)
+  const paidSoFar = useMemo(() => {
+    const p = Number(invoiceRow?.paid_amount ?? 0)
+    if (bookingTotal <= 0) return p
+    return Math.min(p, bookingTotal)
+  }, [invoiceRow?.paid_amount, bookingTotal])
+  const maxPayment = Math.max(0, bookingTotal - paidSoFar)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.amount || parseFloat(form.amount) <= 0) {
       toast.error('Please enter a valid amount')
+      return
+    }
+    if (bookingTotal <= 0) {
+      toast.error('Set the booking total (assign room / edit booking) before recording payment.')
       return
     }
     setSaving(true)
@@ -49,9 +81,18 @@ export default function AddPaymentPage() {
         .from('invoices')
         .select('invoice_id, paid_amount, total_amount, balance_due')
         .eq('booking_id', id)
-        .single()
+        .maybeSingle()
 
       const amount = parseFloat(form.amount)
+      const alreadyPaid = Number(existingInvoice?.paid_amount ?? 0)
+
+      if (alreadyPaid + amount > bookingTotal + 0.009) {
+        toast.error(
+          `Payment cannot exceed the booking total. Maximum this time: ${formatCurrency(Math.max(0, bookingTotal - alreadyPaid))}`
+        )
+        setSaving(false)
+        return
+      }
 
       if (existingInvoice) {
         // Add payment record
@@ -70,13 +111,17 @@ export default function AddPaymentPage() {
 
         if (payError) throw payError
 
-        // Update invoice paid amount
-        const newPaid    = (existingInvoice.paid_amount ?? 0) + amount
-        const newBalance = Math.max(0, (existingInvoice.total_amount ?? 0) - newPaid)
+        // Update invoice paid amount — booking row is source of truth for total
+        const newPaid    = alreadyPaid + amount
+        const newBalance = Math.max(0, bookingTotal - newPaid)
 
         await supabase
           .from('invoices')
           .update({
+            total_amount: bookingTotal,
+            subtotal:     bookingTotal - Number(booking?.tax_amount ?? 0),
+            tax_amount:   booking?.tax_amount ?? 0,
+            tax_rate:     16,
             paid_amount:  newPaid,
             balance_due:  newBalance,
             status:       newBalance <= 0 ? 'paid' : 'sent',
@@ -99,8 +144,8 @@ export default function AddPaymentPage() {
             tax_amount:   booking?.tax_amount ?? 0,
             total_amount: booking?.total_amount ?? 0,
             paid_amount:  amount,
-            balance_due:  Math.max(0, (booking?.total_amount ?? 0) - amount),
-            status:       amount >= (booking?.total_amount ?? 0) ? 'paid' : 'sent',
+            balance_due:  Math.max(0, bookingTotal - amount),
+            status:       amount >= bookingTotal ? 'paid' : 'sent',
             created_by:   1,
           })
           .select()
@@ -202,6 +247,7 @@ export default function AddPaymentPage() {
                   type="number"
                   min="1"
                   step="1"
+                  max={maxPayment > 0 ? maxPayment : undefined}
                   placeholder="0"
                   value={form.amount}
                   onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
@@ -210,24 +256,43 @@ export default function AddPaymentPage() {
                 />
               </div>
 
-              {/* Quick amount buttons */}
-              {booking && (
+              {/* Quick amount buttons — never above remaining balance */}
+              {booking && bookingTotal > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {[
-                    { label: 'Full Amount', value: booking.total_amount },
-                    { label: '50%', value: Math.round(booking.total_amount / 2) },
-                    { label: 'Tax Only', value: booking.tax_amount },
+                    {
+                      label: 'Pay balance',
+                      value: Math.round(maxPayment),
+                    },
+                    {
+                      label: '50% of stay',
+                      value: Math.min(Math.round(bookingTotal / 2), Math.round(maxPayment)),
+                    },
+                    {
+                      label: '25% of stay',
+                      value: Math.min(Math.round(bookingTotal / 4), Math.round(maxPayment)),
+                    },
                   ].map(opt => (
                     <button
                       key={opt.label}
                       type="button"
-                      onClick={() => setForm(f => ({ ...f, amount: String(opt.value) }))}
-                      className="px-3 py-1.5 rounded-lg bg-azure-50 text-azure-700 text-xs font-semibold border border-azure-200 hover:bg-azure-100 transition-colors"
+                      disabled={opt.value <= 0}
+                      onClick={() => setForm(f => ({ ...f, amount: String(Math.max(0, opt.value)) }))}
+                      className="px-3 py-1.5 rounded-lg bg-azure-50 text-azure-700 text-xs font-semibold border border-azure-200 hover:bg-azure-100 transition-colors disabled:opacity-40 disabled:pointer-events-none"
                     >
                       {opt.label} ({formatCurrency(opt.value)})
                     </button>
                   ))}
                 </div>
+              )}
+              {booking && bookingTotal > 0 && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Stay total (room + tax): <span className="font-semibold text-slate-700">{formatCurrency(bookingTotal)}</span>
+                  {' · '}
+                  Already paid: <span className="font-semibold text-slate-700">{formatCurrency(paidSoFar)}</span>
+                  {' · '}
+                  Max this payment: <span className="font-semibold text-azure-700">{formatCurrency(maxPayment)}</span>
+                </p>
               )}
             </div>
 
@@ -325,7 +390,7 @@ export default function AddPaymentPage() {
               <h3 className="font-bold text-slate-900 mb-4">Booking Summary</h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Subtotal</span>
+                  <span className="text-slate-500">Room charges (subtotal)</span>
                   <span className="font-semibold">
                     {formatCurrency((booking?.total_amount ?? 0) - (booking?.tax_amount ?? 0))}
                   </span>
@@ -337,11 +402,23 @@ export default function AddPaymentPage() {
                   </span>
                 </div>
                 <div className="border-t border-slate-100 pt-3 flex justify-between">
-                  <span className="font-bold text-slate-900">Total Due</span>
+                  <span className="font-bold text-slate-900">Stay total (max payable)</span>
                   <span className="font-bold text-lg text-slate-900">
                     {formatCurrency(booking?.total_amount ?? 0)}
                   </span>
                 </div>
+                {bookingTotal > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Collected so far</span>
+                      <span className="font-semibold text-emerald-700">{formatCurrency(paidSoFar)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Remaining</span>
+                      <span className="font-semibold text-amber-700">{formatCurrency(maxPayment)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -360,10 +437,10 @@ export default function AddPaymentPage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-emerald-600">Remaining</span>
+                    <span className="text-emerald-600">After this payment</span>
                     <span className="font-bold text-emerald-800">
                       {formatCurrency(
-                        Math.max(0, (booking?.total_amount ?? 0) - parseFloat(form.amount))
+                        Math.max(0, bookingTotal - paidSoFar - parseFloat(form.amount))
                       )}
                     </span>
                   </div>

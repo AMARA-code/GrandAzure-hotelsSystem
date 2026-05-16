@@ -475,7 +475,7 @@ export default async function MyAccountPage() {
               <div className="acc-info-icon" style={{ background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>📋</div>
               <div style={{ minWidth: 0 }}>
                 <div className="acc-card-title" style={{ fontSize: '0.97rem' }}>My Bookings</div>
-                <div className="acc-card-sub">Your upcoming and past stays, invoices, and booking timeline.</div>
+                <div className="acc-card-sub">Your upcoming and past stays and booking timeline.</div>
                 <div style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: 6, padding: '2px 8px' }}>
                     {account.stats.upcomingVisits} upcoming

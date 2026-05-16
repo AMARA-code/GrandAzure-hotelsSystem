@@ -54,7 +54,7 @@ interface ConferenceBooking {
 
 interface NewBookingForm {
   hall_id: string;
-  guest_id: string;
+  contact_email: string;
   contact_name: string;
   event_name: string;
   event_type: string;
@@ -72,7 +72,7 @@ interface NewBookingForm {
 
 const EMPTY_FORM: NewBookingForm = {
   hall_id: "",
-  guest_id: "",
+  contact_email: "",
   contact_name: "",
   event_name: "",
   event_type: "conference",
@@ -118,6 +118,32 @@ const SETUP_ICONS: Record<string, React.ReactNode> = {
   banquet:   <Layers        className="w-3.5 h-3.5" />,
   classroom: <Presentation  className="w-3.5 h-3.5" />,
 };
+
+// ── Cross-midnight safe duration helper ────────────────────────────────────
+/**
+ * Returns the number of hours between start and end datetimes.
+ * If end <= start (cross-midnight scenario), adds 24h to end before diffing.
+ */
+function safeDurationHours(
+  startDate: string, startTime: string,
+  endDate: string,   endTime: string
+): number {
+  const start = new Date(`${startDate}T${startTime}`);
+  let   end   = new Date(`${endDate}T${endTime}`);
+  // Cross-midnight: end is earlier than or equal to start on the same wall-clock
+  if (end <= start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  return differenceInHours(end, start);
+}
+
+/**
+ * Same helper but accepts full ISO datetime strings (as stored in DB).
+ */
+function safeDurationHoursFromISO(startISO: string, endISO: string): number {
+  const start = new Date(startISO);
+  let   end   = new Date(endISO);
+  if (end <= start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  return differenceInHours(end, start);
+}
 
 // ── Form Field ─────────────────────────────────────────────────────────────
 function Field({
@@ -166,17 +192,19 @@ function NewBookingModal({
     setForm((f) => ({ ...f, [key]: val }));
 
   // Auto-fill total amount based on hall rates when hall / dates change
+  // FIX: uses safeDurationHours to handle cross-midnight events correctly
   useEffect(() => {
     if (!form.hall_id || !form.start_date || !form.start_time || !form.end_date || !form.end_time) return;
     const hall = halls.find((h) => h.hall_id === parseInt(form.hall_id));
     if (!hall) return;
-    const start = new Date(`${form.start_date}T${form.start_time}`);
-    const end   = new Date(`${form.end_date}T${form.end_time}`);
-    const hours = differenceInHours(end, start);
+
+    const hours = safeDurationHours(form.start_date, form.start_time, form.end_date, form.end_time);
     if (hours <= 0) return;
+
     const amount = hours >= 8
       ? Number(hall.full_day_rate)
       : hours * Number(hall.hourly_rate);
+
     setForm((f) => ({
       ...f,
       total_amount: Math.round(amount).toString(),
@@ -189,7 +217,10 @@ function NewBookingModal({
     if (!form.hall_id)       e.hall_id = "Please select a hall";
     if (!form.contact_name.trim()) e.contact_name = "Contact name is required";
     if (!form.event_name.trim())   e.event_name = "Event name is required";
-    if (!form.guest_id.trim())     e.guest_id = "Guest ID is required";
+    if (!form.contact_email.trim()) e.contact_email = "Contact email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email.trim())) {
+      e.contact_email = "Enter a valid email";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -199,9 +230,9 @@ function NewBookingModal({
     if (!form.start_date) e.start_date = "Required";
     if (!form.end_date)   e.end_date = "Required";
     if (form.start_date && form.end_date) {
-      const start = new Date(`${form.start_date}T${form.start_time}`);
-      const end   = new Date(`${form.end_date}T${form.end_time}`);
-      if (end <= start) e.end_date = "End must be after start";
+      // FIX: use safeDurationHours so cross-midnight is valid
+      const hours = safeDurationHours(form.start_date, form.start_time, form.end_date, form.end_time);
+      if (hours <= 0) e.end_date = "End must be after start";
     }
     if (!form.attendees || parseInt(form.attendees) < 1) e.attendees = "Enter number of attendees";
     if (!form.total_amount || Number(form.total_amount) <= 0) e.total_amount = "Enter total amount";
@@ -222,12 +253,53 @@ function NewBookingModal({
     setSubmitting(true);
     setSubmitError("");
     try {
+      const nameParts = form.contact_name.trim().split(/\s+/).filter(Boolean);
+      const firstName = nameParts[0] ?? "Guest";
+      const lastName = nameParts.slice(1).join(" ") || firstName;
+      const emailNorm = form.contact_email.trim().toLowerCase();
+
+      const { data: existingGuest, error: lookErr } = await supabase
+        .from("guests")
+        .select("guest_id")
+        .eq("email", emailNorm)
+        .maybeSingle();
+
+      if (lookErr) throw lookErr;
+
+      let guestIdNum: number;
+      if (existingGuest?.guest_id != null) {
+        guestIdNum = existingGuest.guest_id;
+        const { error: updErr } = await supabase
+          .from("guests")
+          .update({ first_name: firstName, last_name: lastName })
+          .eq("guest_id", guestIdNum);
+        if (updErr) throw updErr;
+      } else {
+        const { data: inserted, error: insErr } = await supabase
+          .from("guests")
+          .insert({
+            first_name: firstName,
+            last_name: lastName,
+            email: emailNorm,
+            phone: "+92-000-0000000",
+            vip_status: "none",
+            marketing_opt_in: false,
+          })
+          .select("guest_id")
+          .single();
+        if (insErr || !inserted) {
+          setSubmitError(insErr?.message ?? "Could not create guest profile.");
+          return;
+        }
+        guestIdNum = inserted.guest_id;
+      }
+
       const start_datetime = `${form.start_date}T${form.start_time}:00`;
       const end_datetime   = `${form.end_date}T${form.end_time}:00`;
 
       const { error } = await supabase.from("conference_bookings").insert({
         hall_id:        parseInt(form.hall_id),
-        guest_id:       parseInt(form.guest_id),
+        guest_id:       guestIdNum,
         contact_name:   form.contact_name.trim(),
         event_name:     form.event_name.trim(),
         event_type:     form.event_type,
@@ -251,6 +323,12 @@ function NewBookingModal({
   };
 
   const selectedHall = halls.find((h) => h.hall_id === parseInt(form.hall_id));
+
+  // FIX: compute preview hours safely for display in step 2
+  const previewHours =
+    form.start_date && form.end_date && form.start_time && form.end_time
+      ? safeDurationHours(form.start_date, form.start_time, form.end_date, form.end_time)
+      : 0;
 
   return (
     <AnimatePresence>
@@ -397,13 +475,12 @@ function NewBookingModal({
                         className={inputCls}
                       />
                     </Field>
-                    <Field label="Guest ID" required error={errors.guest_id}>
+                    <Field label="Contact email" required error={errors.contact_email}>
                       <input
-                        type="number"
-                        min="1"
-                        value={form.guest_id}
-                        onChange={(e) => set("guest_id", e.target.value)}
-                        placeholder="e.g. 42"
+                        type="email"
+                        value={form.contact_email}
+                        onChange={(e) => set("contact_email", e.target.value)}
+                        placeholder="organizer@company.com"
                         className={inputCls}
                       />
                     </Field>
@@ -470,7 +547,6 @@ function NewBookingModal({
                       <input
                         type="date"
                         value={form.end_date}
-                        min={form.start_date}
                         onChange={(e) => set("end_date", e.target.value)}
                         className={inputCls}
                       />
@@ -485,28 +561,22 @@ function NewBookingModal({
                     </Field>
                   </div>
 
-                  {/* Duration preview */}
-                  {form.start_date && form.end_date && form.start_time && form.end_time && (() => {
-                    const hours = differenceInHours(
-                      new Date(`${form.end_date}T${form.end_time}`),
-                      new Date(`${form.start_date}T${form.start_time}`)
-                    );
-                    return hours > 0 ? (
-                      <div className="flex items-center gap-2 text-xs text-azure-700 bg-azure-50 border border-azure-100 rounded-xl px-3 py-2">
-                        <Clock className="w-3.5 h-3.5 shrink-0" />
-                        Duration: <strong>{hours}h</strong>
-                        {selectedHall && (
-                          <span className="ml-auto text-azure-500">
-                            Auto-priced: {formatPKR(
-                              hours >= 8
-                                ? selectedHall.full_day_rate
-                                : hours * Number(selectedHall.hourly_rate)
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    ) : null;
-                  })()}
+                  {/* Duration preview — FIX: uses previewHours (cross-midnight safe) */}
+                  {previewHours > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-azure-700 bg-azure-50 border border-azure-100 rounded-xl px-3 py-2">
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                      Duration: <strong>{previewHours}h</strong>
+                      {selectedHall && (
+                        <span className="ml-auto text-azure-500">
+                          Auto-priced: {formatPKR(
+                            previewHours >= 8
+                              ? selectedHall.full_day_rate
+                              : previewHours * Number(selectedHall.hourly_rate)
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <Field label="Number of Attendees" required error={errors.attendees}>
                     <input
@@ -802,10 +872,12 @@ function BookingRow({ booking, index }: { booking: ConferenceBooking; index: num
     : color === "emerald" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : "bg-violet-50 text-violet-700 border-violet-200";
 
-  const hours = differenceInHours(
-    new Date(booking.end_datetime), new Date(booking.start_datetime)
+  // FIX: use safeDurationHoursFromISO so cross-midnight bookings show correct duration
+  const hours = safeDurationHoursFromISO(booking.start_datetime, booking.end_datetime);
+  const depositPct = Math.min(
+    100,
+    Math.round((Number(booking.deposit_paid) / Number(booking.total_amount)) * 100)
   );
-  const depositPct = Math.round((Number(booking.deposit_paid) / Number(booking.total_amount)) * 100);
 
   return (
     <motion.div
@@ -1035,7 +1107,6 @@ export default function ConferencePage() {
               </p>
             </div>
           </div>
-          {/* ← Now opens the modal */}
           <button
             onClick={() => setShowNewBooking(true)}
             className="flex items-center gap-2 gradient-azure text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-azure hover:shadow-azure-lg transition-all self-start xs:self-auto shrink-0"

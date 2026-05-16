@@ -65,6 +65,12 @@ export default function BookingDetailPage() {
 
   const vip = vipColors[booking.guest?.vip_status as keyof typeof vipColors] ?? vipColors.none
 
+  const bookingTotalPay = Number(booking.total_amount ?? 0)
+  const rawPaid = Number(booking.paid_amount ?? 0)
+  const paidDisplay =
+    bookingTotalPay > 0 ? Math.min(rawPaid, bookingTotalPay) : rawPaid
+  const balanceLeft = Math.max(0, bookingTotalPay - paidDisplay)
+
   return (
     <div className="space-y-6 pb-8">
 
@@ -356,6 +362,24 @@ export default function BookingDetailPage() {
                   {formatCurrency(booking.total_amount)}
                 </span>
               </div>
+              {bookingTotalPay > 0 && (
+                <>
+                  <div className="flex justify-between text-sm pt-2">
+                    <span className="text-slate-500">Collected</span>
+                    <span className="font-semibold text-emerald-700">
+                      {formatCurrency(paidDisplay)}
+                    </span>
+                  </div>
+                  {balanceLeft > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Balance due</span>
+                      <span className="font-semibold text-amber-700">
+                        {formatCurrency(balanceLeft)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Rate Plan */}
@@ -452,18 +476,6 @@ export default function BookingDetailPage() {
                 </div>
                 <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
                   Guest Profile
-                </span>
-              </Link>
-
-              <Link
-                href="/finance"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 border border-slate-100 transition-colors text-left group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-azure-50 flex items-center justify-center">
-                  <Receipt className="w-4 h-4 text-azure-600" />
-                </div>
-                <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
-                  View Invoice
                 </span>
               </Link>
             </div>
