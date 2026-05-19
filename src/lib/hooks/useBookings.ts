@@ -66,17 +66,16 @@ export interface BookingFilters {
 }
 
 // ── Auto-transition bookings + fully reconcile room statuses ───────────────
-// STEP 1 — Fix all booking statuses based on today's date.
-// STEP 2 — Reconcile every room's status from scratch using live bookings
-//           as the single source of truth. Manual overrides are ignored.
-//           Rule: room is 'occupied' if and only if it has a checked_in
-//           booking right now. Everything else is 'available'.
+// NOTE: 'pending' bookings are intentionally excluded from all auto-transitions.
+// They must be manually confirmed by an admin via the booking detail page.
+// Only 'confirmed' and 'checked_in' bookings are eligible for auto-transition.
 export async function autoTransitionBookings(): Promise<void> {
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
   try {
     // ── STEP 1: Fix booking statuses ──────────────────────────────────────
+    // Pending bookings are NEVER auto-transitioned — admin must confirm them first.
 
     // A) confirmed → checked_in  (check-in reached, not yet departed)
     const { data: toCheckIn } = await supabase
@@ -123,6 +122,8 @@ export async function autoTransitionBookings(): Promise<void> {
     }
 
     // D) confirmed → checked_out  (both dates passed, never checked in)
+    // NOTE: pending bookings with passed dates are left as-is — admin must
+    // decide to confirm or cancel them manually.
     const { data: missedStay } = await supabase
       .from('bookings')
       .select('booking_id')
@@ -137,9 +138,8 @@ export async function autoTransitionBookings(): Promise<void> {
     }
 
     // ── STEP 2: Reconcile ALL room statuses from scratch ──────────────────
-    // After booking statuses are corrected above, fetch every room_id
-    // that belongs to a currently checked_in booking — these are the ONLY
-    // rooms that should be 'occupied'. Everything else → 'available'.
+    // Only checked_in bookings make rooms 'occupied'.
+    // Pending bookings do NOT occupy rooms until confirmed + checked in.
 
     const { data: activeBookingRooms } = await supabase
       .from('bookings')
@@ -151,7 +151,6 @@ export async function autoTransitionBookings(): Promise<void> {
     )
     const occupiedSet = new Set(occupiedRoomIds)
 
-    // Fetch all non-deleted rooms
     const { data: allRooms } = await supabase
       .from('rooms')
       .select('room_id, status')
@@ -159,29 +158,20 @@ export async function autoTransitionBookings(): Promise<void> {
 
     if (!allRooms) return
 
-    // Rooms that should be occupied but aren't
     const shouldBeOccupied = allRooms
       .filter((r: any) => occupiedSet.has(r.room_id) && r.status !== 'occupied')
       .map((r: any) => r.room_id)
 
-    // Rooms marked occupied but have no active checked_in booking
     const shouldBeAvailable = allRooms
       .filter((r: any) => !occupiedSet.has(r.room_id) && r.status === 'occupied')
       .map((r: any) => r.room_id)
 
-    // Apply both corrections in parallel
     await Promise.all([
       shouldBeOccupied.length > 0
-        ? supabase
-            .from('rooms')
-            .update({ status: 'occupied' })
-            .in('room_id', shouldBeOccupied)
+        ? supabase.from('rooms').update({ status: 'occupied' }).in('room_id', shouldBeOccupied)
         : Promise.resolve(),
       shouldBeAvailable.length > 0
-        ? supabase
-            .from('rooms')
-            .update({ status: 'available' })
-            .in('room_id', shouldBeAvailable)
+        ? supabase.from('rooms').update({ status: 'available' }).in('room_id', shouldBeAvailable)
         : Promise.resolve(),
     ])
 
@@ -193,8 +183,8 @@ export async function autoTransitionBookings(): Promise<void> {
 // ── useBookings ────────────────────────────────────────────────────────────
 export function useBookings(filters: BookingFilters) {
   const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
-  const [total, setTotal] = useState(0)
+  const [loading, setLoading]   = useState(true)
+  const [total, setTotal]       = useState(0)
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
@@ -259,6 +249,7 @@ export function useBookings(filters: BookingFilters) {
         `)
         .order('booking_id', { ascending: false })
 
+      // Status filter — 'all' includes pending too
       if (filters.status && filters.status !== 'all') {
         query = query.eq('booking_status', filters.status)
       }
@@ -294,7 +285,7 @@ export function useBookings(filters: BookingFilters) {
         hotel:                 b.hotels,
         channel:               b.channels,
         rate_plan:             b.room_rate_plans,
-        booking_rooms:         (b.booking_rooms ?? []).map((br: any) => ({
+        booking_rooms: (b.booking_rooms ?? []).map((br: any) => ({
           room_id:        br.room_id,
           rate_per_night: br.rate_per_night,
           room:           br.rooms,
@@ -318,9 +309,7 @@ export function useBookings(filters: BookingFilters) {
       }
 
       if (filters.channel_type && filters.channel_type !== 'all') {
-        result = result.filter(b =>
-          b.channel?.channel_type === filters.channel_type
-        )
+        result = result.filter(b => b.channel?.channel_type === filters.channel_type)
       }
 
       setBookings(result)
@@ -333,7 +322,7 @@ export function useBookings(filters: BookingFilters) {
     }
   }, [filters])
 
-  // On mount: run auto-transition + room reconciliation first, then fetch
+  // On mount: run auto-transition (skips pending) then fetch
   useEffect(() => {
     autoTransitionBookings().then(() => fetchBookings())
   }, [fetchBookings])
@@ -348,6 +337,8 @@ export function useBooking(id: number) {
 
   useEffect(() => {
     const fetchBooking = async () => {
+      // Only run auto-transition on non-pending bookings (safe — function
+      // internally excludes pending from any status changes)
       await autoTransitionBookings()
 
       try {
@@ -433,7 +424,7 @@ export function useBooking(id: number) {
           hotel:                 data.hotels as any,
           channel:               data.channels as any,
           rate_plan:             data.room_rate_plans as any,
-          booking_rooms:         (data.booking_rooms ?? []).map((br: any) => ({
+          booking_rooms: (data.booking_rooms ?? []).map((br: any) => ({
             room_id:        br.room_id,
             rate_per_night: br.rate_per_night,
             room:           br.rooms,

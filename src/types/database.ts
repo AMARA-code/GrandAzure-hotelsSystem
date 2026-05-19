@@ -1,8 +1,31 @@
 export type HotelStatus = 'active' | 'inactive'
 export type RoomStatus = 'available' | 'occupied' | 'dirty' | 'maintenance' | 'blocked'
-export type BookingStatus = 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show'
-export type PaymentMethod = 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'corporate_account'
-export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
+export type BookingStatus =
+  | 'pending_payment'   // NEW — guest chose advance pay, waiting for screenshot upload
+  | 'pending_approval'  // NEW — submitted (either pay-at-hotel or payment uploaded), awaiting admin
+  | 'confirmed'
+  | 'checked_in'
+  | 'checked_out'
+  | 'cancelled'
+  | 'no_show'
+
+export type PaymentMethod =
+  | 'cash'
+  | 'credit_card'
+  | 'debit_card'
+  | 'bank_transfer'
+  | 'corporate_account'
+  | 'jazzcash'          // NEW
+  | 'pay_at_hotel'      // NEW
+
+export type PaymentStatus =
+  | 'pending'
+  | 'pending_verification'  // NEW — screenshot uploaded, admin hasn't verified yet
+  | 'verified'              // NEW — admin verified the JazzCash screenshot
+  | 'completed'
+  | 'failed'
+  | 'refunded'
+
 export type GenderType = 'male' | 'female' | 'other'
 export type VipStatus = 'none' | 'silver' | 'gold' | 'platinum' | 'diamond'
 export type EmploymentType = 'full_time' | 'part_time' | 'contract'
@@ -125,6 +148,19 @@ export interface Booking {
   loyalty_points_earned: number
   special_requests: string | null
   created_at: string
+
+  // ── Advance Payment fields (NEW) ──────────────────────────────────
+  payment_method: PaymentMethod | null
+  advance_payment_amount: number | null   // amount guest paid upfront (after 10% discount)
+  discount_amount: number | null          // PKR value of 10% discount
+  discount_applied: boolean               // true if advance pay chosen
+  jazzcash_screenshot_url: string | null  // Supabase Storage URL of uploaded proof
+  jazzcash_sender_number: string | null   // e.g. "03001234567"
+  jazzcash_transaction_id: string | null  // optional — guest can enter if visible on receipt
+  payment_status: PaymentStatus | null
+  payment_verified_by: number | null      // staff_id who verified
+  payment_verified_at: string | null
+
   // Joined fields
   guest?: Guest
   hotel?: Hotel
@@ -138,11 +174,13 @@ export interface Invoice {
   invoice_no: string
   invoice_date: string
   subtotal: number
+  discount_amount: number        // NEW — 0 if no discount
   tax_rate: number
   tax_amount: number
   total_amount: number
   paid_amount: number
   balance_due: number
+  payment_method: PaymentMethod | null
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
   created_at: string
 }
@@ -293,4 +331,35 @@ export interface OccupancyData {
   date: string
   occupancy_rate: number
   revenue: number
+}
+
+// ── NEW: advance-payment workflow helpers ─────────────────────────────────────
+
+/** Shape returned by the payment-choice step before booking is saved */
+export interface AdvancePaymentIntent {
+  bookingId: number
+  confirmationNo: string
+  guestEmail: string
+  guestName: string
+  hotelName: string
+  roomTypeName: string
+  checkIn: string
+  checkOut: string
+  totalNights: number
+  originalAmount: number       // full price without discount
+  discountAmount: number       // 10% of originalAmount
+  advanceAmount: number        // what guest must pay now (originalAmount - discountAmount)
+  balanceDue: number           // 0 because full advance; or remaining for partial
+  jazzcashNumber: string       // hotel's JazzCash account number to send to
+  accountName: string          // account holder name shown to guest
+}
+
+/** What the admin sees for a pending-payment booking */
+export interface PendingPaymentReview {
+  booking: Booking
+  screenshotUrl: string | null
+  senderNumber: string | null
+  transactionId: string | null
+  advanceAmount: number
+  discountAmount: number
 }

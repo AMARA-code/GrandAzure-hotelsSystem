@@ -1,78 +1,88 @@
 import { cn } from '@/lib/utils/cn'
-import {
-  Clock, CheckCircle, XCircle,
-  LogIn, LogOut, AlertCircle
-} from 'lucide-react'
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
+  pending: {
+    label:  'Pending',
+    dot:    'bg-amber-400',
+    bg:     'bg-amber-50',
+    text:   'text-amber-700',
+    border: 'border-amber-200',
+  },
   confirmed: {
-    label: 'Confirmed',
-    icon: Clock,
-    bg: 'bg-azure-50',
-    text: 'text-azure-700',
+    label:  'Confirmed',
+    dot:    'bg-azure-500',
+    bg:     'bg-azure-50',
+    text:   'text-azure-700',
     border: 'border-azure-200',
-    dot: 'bg-azure-500',
   },
   checked_in: {
-    label: 'Checked In',
-    icon: LogIn,
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
+    label:  'Checked In',
+    dot:    'bg-emerald-500',
+    bg:     'bg-emerald-50',
+    text:   'text-emerald-700',
     border: 'border-emerald-200',
-    dot: 'bg-emerald-500',
   },
   checked_out: {
-    label: 'Checked Out',
-    icon: LogOut,
-    bg: 'bg-slate-50',
-    text: 'text-slate-700',
+    label:  'Checked Out',
+    dot:    'bg-slate-400',
+    bg:     'bg-slate-50',
+    text:   'text-slate-600',
     border: 'border-slate-200',
-    dot: 'bg-slate-400',
   },
   cancelled: {
-    label: 'Cancelled',
-    icon: XCircle,
-    bg: 'bg-rose-50',
-    text: 'text-rose-700',
+    label:  'Cancelled',
+    dot:    'bg-rose-500',
+    bg:     'bg-rose-50',
+    text:   'text-rose-700',
     border: 'border-rose-200',
-    dot: 'bg-rose-500',
   },
   no_show: {
-    label: 'No Show',
-    icon: AlertCircle,
-    bg: 'bg-gold-50',
-    text: 'text-gold-700',
-    border: 'border-gold-200',
-    dot: 'bg-gold-500',
+    label:  'No Show',
+    dot:    'bg-orange-500',
+    bg:     'bg-orange-50',
+    text:   'text-orange-700',
+    border: 'border-orange-200',
   },
 }
 
-interface BookingStatusBadgeProps {
+interface Props {
   status: string
   size?: 'sm' | 'md' | 'lg'
-  showIcon?: boolean
 }
 
-export default function BookingStatusBadge({
-  status,
-  size = 'md',
-  showIcon = true,
-}: BookingStatusBadgeProps) {
-  const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig.confirmed
-  const Icon = config.icon
+export default function BookingStatusBadge({ status, size = 'md' }: Props) {
+  const cfg = statusConfig[status] ?? {
+    label:  status,
+    dot:    'bg-slate-400',
+    bg:     'bg-slate-50',
+    text:   'text-slate-600',
+    border: 'border-slate-200',
+  }
 
   return (
-    <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-full border font-semibold',
-      config.bg, config.text, config.border,
-      size === 'sm'  && 'px-2 py-0.5 text-xs',
-      size === 'md'  && 'px-3 py-1 text-xs',
-      size === 'lg'  && 'px-4 py-1.5 text-sm',
-    )}>
-      {showIcon && <Icon className={cn(
-        size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'
-      )} />}
-      {config.label}
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border font-semibold',
+        cfg.bg, cfg.text, cfg.border,
+        size === 'sm' && 'px-2 py-0.5 text-[10px]',
+        size === 'md' && 'px-2.5 py-1 text-xs',
+        size === 'lg' && 'px-3 py-1.5 text-sm',
+      )}
+    >
+      <span
+        className={cn(
+          'rounded-full flex-shrink-0',
+          cfg.dot,
+          // Pulsing dot for pending status
+          status === 'pending' ? 'relative' : '',
+          size === 'sm' ? 'h-1.5 w-1.5' : 'h-2 w-2',
+        )}
+      >
+        {status === 'pending' && (
+          <span className={cn('absolute inset-0 rounded-full animate-ping opacity-75', cfg.dot)} />
+        )}
+      </span>
+      {cfg.label}
     </span>
   )
 }
