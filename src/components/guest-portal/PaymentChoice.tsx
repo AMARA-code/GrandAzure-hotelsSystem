@@ -5,22 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Zap, Hotel, Tag, Shield, Clock } from 'lucide-react'
 
 interface PaymentChoiceProps {
-  originalAmount: number
-  onSelect: (method: 'pay_at_hotel' | 'jazzcash') => void
+  totalAmount: number
+  onChoice: (choice: 'pay_at_hotel' | 'jazzcash') => Promise<void>
+  isLoading: boolean
 }
 
 const DISCOUNT_RATE = 0.10
 
-export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoiceProps) {
+export default function PaymentChoice({ totalAmount, onChoice, isLoading }: PaymentChoiceProps) {
   const [selected, setSelected] = useState<'pay_at_hotel' | 'jazzcash' | null>(null)
 
-  const discountAmount = Math.round(originalAmount * DISCOUNT_RATE)
-  const advanceAmount = originalAmount - discountAmount
+  const discountAmount = Math.round(totalAmount * DISCOUNT_RATE)
+  const advanceAmount = totalAmount - discountAmount
   const fmt = (n: number) => `PKR ${n.toLocaleString('en-PK')}`
 
   function handleSelect(method: 'pay_at_hotel' | 'jazzcash') {
+    if (isLoading) return
     setSelected(method)
-    setTimeout(() => onSelect(method), 320)
+    setTimeout(() => onChoice(method), 320)
   }
 
   return (
@@ -37,7 +39,7 @@ export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoic
         </h2>
         <p className="text-sm text-slate-500 mt-2">
           Total stay value:{' '}
-          <span className="font-medium text-slate-700">{fmt(originalAmount)}</span>
+          <span className="font-medium text-slate-700">{fmt(totalAmount)}</span>
         </p>
       </div>
 
@@ -46,7 +48,8 @@ export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoic
         <motion.button
           onClick={() => handleSelect('pay_at_hotel')}
           whileTap={{ scale: 0.98 }}
-          className={`relative rounded-2xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+          disabled={isLoading}
+          className={`relative rounded-2xl border-2 p-6 text-left transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
             selected === 'pay_at_hotel'
               ? 'border-slate-800 bg-slate-800 text-white shadow-xl'
               : 'border-slate-200 bg-white hover:border-slate-400 hover:shadow-lg'
@@ -71,7 +74,7 @@ export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoic
           <div className={`rounded-xl p-3 mb-4 ${selected === 'pay_at_hotel' ? 'bg-white/10' : 'bg-slate-50'}`}>
             <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">Due at Check-In</p>
             <p className={`text-xl font-bold ${selected === 'pay_at_hotel' ? 'text-white' : 'text-slate-800'}`}>
-              {fmt(originalAmount)}
+              {fmt(totalAmount)}
             </p>
           </div>
 
@@ -101,7 +104,8 @@ export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoic
         <motion.button
           onClick={() => handleSelect('jazzcash')}
           whileTap={{ scale: 0.98 }}
-          className={`relative rounded-2xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+          disabled={isLoading}
+          className={`relative rounded-2xl border-2 p-6 text-left transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
             selected === 'jazzcash'
               ? 'border-amber-500 bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-xl shadow-amber-200'
               : 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400 hover:shadow-lg hover:shadow-amber-100'
@@ -134,7 +138,7 @@ export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoic
           <div className={`rounded-xl p-3 mb-4 ${selected === 'jazzcash' ? 'bg-white/15' : 'bg-white/80'}`}>
             <div className="flex justify-between mb-1">
               <span className={`text-xs ${selected === 'jazzcash' ? 'text-amber-200' : 'text-slate-400'}`}>Original</span>
-              <span className={`text-sm line-through ${selected === 'jazzcash' ? 'text-amber-200' : 'text-slate-400'}`}>{fmt(originalAmount)}</span>
+              <span className={`text-sm line-through ${selected === 'jazzcash' ? 'text-amber-200' : 'text-slate-400'}`}>{fmt(totalAmount)}</span>
             </div>
             <div className="flex justify-between mb-2">
               <span className={`text-xs ${selected === 'jazzcash' ? 'text-green-300' : 'text-green-600'}`}>Discount (10%)</span>
@@ -175,8 +179,8 @@ export default function PaymentChoice({ originalAmount, onSelect }: PaymentChoic
       <div className="flex items-center justify-center gap-6 mt-6">
         {[
           { icon: Shield, label: 'Secure booking' },
-          { icon: Clock, label: 'Instant confirmation' },
-          { icon: Check, label: 'No hidden fees' },
+          { icon: Clock,  label: 'Instant confirmation' },
+          { icon: Check,  label: 'No hidden fees' },
         ].map(({ icon: Icon, label }) => (
           <div key={label} className="flex items-center gap-1.5 text-xs text-slate-400">
             <Icon size={11} />
