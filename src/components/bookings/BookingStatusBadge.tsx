@@ -48,9 +48,10 @@ const statusConfig: Record<string, { label: string; dot: string; bg: string; tex
 interface Props {
   status: string
   size?: 'sm' | 'md' | 'lg'
+  showIcon?: boolean
 }
 
-export default function BookingStatusBadge({ status, size = 'md' }: Props) {
+export default function BookingStatusBadge({ status, size = 'md', showIcon = true }: Props) {
   const cfg = statusConfig[status] ?? {
     label:  status,
     dot:    'bg-slate-400',
@@ -69,19 +70,20 @@ export default function BookingStatusBadge({ status, size = 'md' }: Props) {
         size === 'lg' && 'px-3 py-1.5 text-sm',
       )}
     >
-      <span
-        className={cn(
-          'rounded-full flex-shrink-0',
-          cfg.dot,
-          // Pulsing dot for pending status
-          status === 'pending' ? 'relative' : '',
-          size === 'sm' ? 'h-1.5 w-1.5' : 'h-2 w-2',
-        )}
-      >
-        {status === 'pending' && (
-          <span className={cn('absolute inset-0 rounded-full animate-ping opacity-75', cfg.dot)} />
-        )}
-      </span>
+      {showIcon && (
+        <span
+          className={cn(
+            'rounded-full flex-shrink-0',
+            cfg.dot,
+            status === 'pending' ? 'relative' : '',
+            size === 'sm' ? 'h-1.5 w-1.5' : 'h-2 w-2',
+          )}
+        >
+          {status === 'pending' && (
+            <span className={cn('absolute inset-0 rounded-full animate-ping opacity-75', cfg.dot)} />
+          )}
+        </span>
+      )}
       {cfg.label}
     </span>
   )
