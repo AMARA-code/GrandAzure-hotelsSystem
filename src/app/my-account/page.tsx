@@ -26,14 +26,42 @@ export default async function MyAccountPage() {
     ? `${guestFirstName[0]}${guestLastName[0]}`.toUpperCase()
     : displayName.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
-  // Stats: Total Visits | Pending Bookings | Total Spend | Upcoming | Last Stay
-  // (Total Nights card removed; Pending Bookings card added in its place)
+  // ─── Recompute all stats from the actual bookings array ───────────────────
+  // This ensures the hero pills, stat cards, info cards, and booking rows are
+  // all consistent with the same source of truth.
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const correctedStats = {
+    totalVisits: account.bookings.filter(b => {
+      const s = String(b.booking_status ?? '').toLowerCase()
+      return s === 'checked_out' || s === 'completed'
+    }).length,
+
+    pendingBookings: account.bookings.filter(b =>
+      String(b.booking_status ?? '').toLowerCase() === 'pending'
+    ).length,
+
+    totalSpend: account.bookings
+      .filter(b => String(b.booking_status ?? '').toLowerCase() !== 'cancelled')
+      .reduce((sum, b) => sum + Number(b.total_amount ?? 0), 0),
+
+    upcomingVisits: account.bookings.filter(b => {
+      const s = String(b.booking_status ?? '').toLowerCase()
+      const checkIn = new Date(String(b.check_in_date))
+      return (s === 'confirmed' || s === 'pending') && checkIn >= today
+    }).length,
+
+    lastVisitDate: account.stats.lastVisitDate, // keep DB value for last stay date
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const stats = [
-    { label: 'Total Visits',      value: account.stats.totalVisits,                                                  color: '#D4722A', bg: '#FFF4ED', border: '#F5C9A8' },
-    { label: 'Pending Bookings',  value: account.stats.pendingBookings,                                               color: '#CA8A04', bg: '#FEFCE8', border: '#FDE68A' },
-    { label: 'Total Spend',       value: formatCurrency(account.stats.totalSpend),                                    color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-    { label: 'Upcoming',          value: account.stats.upcomingVisits,                                                color: '#9333EA', bg: '#FDF4FF', border: '#E9D5FF' },
-    { label: 'Last Stay',         value: account.stats.lastVisitDate ? formatDate(account.stats.lastVisitDate) : '—', color: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' },
+    { label: 'Total Visits',      value: correctedStats.totalVisits,                                                              color: '#D4722A', bg: '#FFF4ED', border: '#F5C9A8' },
+    { label: 'Pending Bookings',  value: correctedStats.pendingBookings,                                                           color: '#CA8A04', bg: '#FEFCE8', border: '#FDE68A' },
+    { label: 'Total Spend',       value: formatCurrency(correctedStats.totalSpend),                                                color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
+    { label: 'Upcoming',          value: correctedStats.upcomingVisits,                                                            color: '#9333EA', bg: '#FDF4FF', border: '#E9D5FF' },
+    { label: 'Last Stay',         value: correctedStats.lastVisitDate ? formatDate(correctedStats.lastVisitDate) : '—',            color: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' },
   ]
 
   return (
@@ -46,7 +74,6 @@ export default async function MyAccountPage() {
         /* ─────────────────────────────────────────
            PAGE SHELL
         ───────────────────────────────────────── */
-        /* GLOBAL OVERFLOW FIX */
         html, body { overflow-x: hidden; max-width: 100%; }
 
         .acc-pg {
@@ -282,7 +309,6 @@ export default async function MyAccountPage() {
         .acc-booking-row:last-child { margin-bottom: 0; }
         .acc-booking-row:hover { border-color: #F5C9A8; box-shadow: 0 4px 16px rgba(212,114,42,0.08); }
 
-        /* Booking left side */
         .acc-booking-left {
           display: flex; align-items: center; gap: 0.625rem; min-width: 0; flex: 1;
         }
@@ -310,7 +336,6 @@ export default async function MyAccountPage() {
         }
         @media (min-width: 480px) { .acc-booking-status { font-size: 0.62rem; } }
 
-        /* Booking right side — stacks on tiny screens */
         .acc-booking-right {
           text-align: right; flex-shrink: 0;
           display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
@@ -320,7 +345,6 @@ export default async function MyAccountPage() {
           font-size: 0.65rem; color: #A8A29E;
         }
         @media (min-width: 480px) { .acc-booking-dates { font-size: 0.7rem; } }
-        /* On very small screens hide the date arrow to save space */
         @media (max-width: 359px) { .acc-booking-arrow { display: none; } }
 
         .acc-booking-amount {
@@ -421,12 +445,12 @@ export default async function MyAccountPage() {
                   </span>
                 </div>
                 <div className="acc-meta-pills">
-                  <div className="acc-meta-pill">🏨 <span>{account.stats.totalVisits}</span> stays</div>
-                  <div className="acc-meta-pill">⏳ <span>{account.stats.pendingBookings}</span> pending</div>
-                  <div className="acc-meta-pill">💳 <span>{formatCurrency(account.stats.totalSpend)}</span> lifetime</div>
-                  {account.stats.upcomingVisits > 0 && (
+                  <div className="acc-meta-pill">🏨 <span>{correctedStats.totalVisits}</span> stays</div>
+                  <div className="acc-meta-pill">⏳ <span>{correctedStats.pendingBookings}</span> pending</div>
+                  <div className="acc-meta-pill">💳 <span>{formatCurrency(correctedStats.totalSpend)}</span> lifetime</div>
+                  {correctedStats.upcomingVisits > 0 && (
                     <div className="acc-meta-pill" style={{ borderColor: 'rgba(34,197,94,0.3)', color: '#86EFAC' }}>
-                      ✈️ <span style={{ color: '#86EFAC' }}>{account.stats.upcomingVisits}</span> upcoming
+                      ✈️ <span style={{ color: '#86EFAC' }}>{correctedStats.upcomingVisits}</span> upcoming
                     </div>
                   )}
                 </div>
@@ -443,7 +467,6 @@ export default async function MyAccountPage() {
                 style={{
                   background: s.bg,
                   borderColor: s.border,
-                  // On 2-col mobile, the 5th card is alone — span it across both columns
                   gridColumn: i === stats.length - 1 && stats.length % 2 !== 0 ? 'span 2' : undefined,
                 }}
               >
@@ -480,13 +503,13 @@ export default async function MyAccountPage() {
                 <div className="acc-card-sub">Your upcoming and past stays and booking timeline.</div>
                 <div style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: 6, padding: '2px 8px' }}>
-                    {account.stats.upcomingVisits} upcoming
+                    {correctedStats.upcomingVisits} upcoming
                   </span>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#FEFCE8', border: '1px solid #FDE68A', color: '#CA8A04', borderRadius: 6, padding: '2px 8px' }}>
-                    {account.stats.pendingBookings} pending
+                    {correctedStats.pendingBookings} pending
                   </span>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#16A34A', borderRadius: 6, padding: '2px 8px' }}>
-                    {account.stats.totalVisits} stays
+                    {correctedStats.totalVisits} stays
                   </span>
                 </div>
               </div>
@@ -528,7 +551,7 @@ export default async function MyAccountPage() {
                   const statusColor =
                     status === 'confirmed'                              ? { bg: '#F0FDF4', border: '#BBF7D0', text: '#16A34A' } :
                     status === 'checked_out' || status === 'completed' ? { bg: '#EFF6FF', border: '#BFDBFE', text: '#2563EB' } :
-                    status === 'cancelled'                              ? { bg: '#FFF1F2', border: '#FECDD3', text: '#E11D48' } :
+                    status === 'cancelled'                             ? { bg: '#FFF1F2', border: '#FECDD3', text: '#E11D48' } :
                     { bg: '#FFF4ED', border: '#F5C9A8', text: '#D4722A' }
 
                   return (
