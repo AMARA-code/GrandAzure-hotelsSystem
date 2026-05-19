@@ -16,6 +16,7 @@ interface JazzCashPaymentProps {
   jazzcashNumber?: string
   accountName?: string
   onSuccess: (data: { screenshotUrl: string; senderNumber: string; transactionId: string }) => void
+  onBack?: () => void
 }
 
 const DEFAULT_JAZZCASH_NUMBER = process.env.NEXT_PUBLIC_JAZZCASH_NUMBER ?? '03XX-XXXXXXX'
@@ -30,6 +31,7 @@ export default function JazzCashPayment({
   jazzcashNumber = DEFAULT_JAZZCASH_NUMBER,
   accountName = DEFAULT_ACCOUNT_NAME,
   onSuccess,
+  onBack,
 }: JazzCashPaymentProps) {
   const [step, setStep] = useState<'instructions' | 'upload'>('instructions')
   const [copied, setCopied] = useState<'number' | 'amount' | null>(null)
@@ -168,9 +170,14 @@ export default function JazzCashPayment({
               <p>After sending, take a <strong>screenshot of your JazzCash confirmation screen</strong> and proceed to upload it.</p>
             </div>
 
-            <button onClick={() => setStep('upload')} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors">
-              I&apos;ve Sent the Payment <ArrowRight size={16} />
-            </button>
+            <div className="flex gap-3">
+              {onBack && (
+                <button onClick={onBack} className="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium py-3.5 rounded-xl transition-colors text-sm">Back</button>
+              )}
+              <button onClick={() => setStep('upload')} className={`${onBack ? 'flex-[2]' : 'w-full'} bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors`}>
+                I&apos;ve Sent the Payment <ArrowRight size={16} />
+              </button>
+            </div>
           </motion.div>
         )}
 
