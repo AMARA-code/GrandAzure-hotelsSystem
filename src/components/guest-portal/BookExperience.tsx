@@ -1,4 +1,4 @@
-
+﻿
 'use client'
 
 import { useMemo, useState, useEffect, useRef, type MouseEvent } from 'react'
@@ -19,7 +19,7 @@ type HotelType  = { hotel_id: number; hotel_name: string; city: string }
 type RoomType   = {
   room_type_id: number; hotel_id: number; type_name: string
   type_category: string; description: string; max_occupancy: number
-  base_price: number | string; view_type: string
+  base_price: number | string; view_type?: string | null
 }
 type SeasonalType = {
   pricing_id: number; hotel_id: number; season_name: string
@@ -48,7 +48,7 @@ function localTodayYMD(): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-// ─── colour tokens matching globals.css ────────────────────────────────────────
+// â”€â”€â”€ colour tokens matching globals.css â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const C = {
   primary:    '#D4722A',
   primary100: '#fff2e7',
@@ -65,34 +65,42 @@ const C = {
 
 export default function BookExperience({
   hotels, roomTypes, seasonalPricing, ratePlans, userEmail, isAuthenticated,
+  showCatalog = true,
+  initialRoomTypeId = null,
+  onBookingModalClose,
 }: {
   hotels: HotelType[]; roomTypes: RoomType[]; seasonalPricing: SeasonalType[]
   ratePlans: RatePlanType[]; userEmail: string | null; isAuthenticated: boolean
+  /** When false, only the booking modal is rendered (e.g. hotel detail page). */
+  showCatalog?: boolean
+  /** Open the booking form for this room type (controlled by parent). */
+  initialRoomTypeId?: number | null
+  onBookingModalClose?: () => void
 }) {
   const router = useRouter()
   const supabase = createClient()
 
-  // ── filter state ────────────────────────────────────────────────────────────
+  // â”€â”€ filter state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [selectedHotel, setSelectedHotel]     = useState<number | 'all'>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [openDropdown, setOpenDropdown]        = useState<'hotel' | 'category' | null>(null)
 
-  // ── room selection ──────────────────────────────────────────────────────────
+  // â”€â”€ room selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null)
 
-  // ── form ────────────────────────────────────────────────────────────────────
+  // â”€â”€ form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [bookingForm, setBookingForm] = useState({
     checkIn: '', checkOut: '', adults: '2', children: '0',
     specialRequests: '', guestFirstName: '', guestLastName: '',
   })
 
-  // ── modal step ──────────────────────────────────────────────────────────────
+  // â”€â”€ modal step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [modalStep, setModalStep] = useState<ModalStep>('form')
 
-  // ── computed amounts (set when moving to payment_choice) ────────────────────
+  // â”€â”€ computed amounts (set when moving to payment_choice) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [amounts, setAmounts] = useState({ total: 0, discount: 0, advance: 0, nights: 0 })
 
-  // ── JazzCash upload state ───────────────────────────────────────────────────
+  // â”€â”€ JazzCash upload state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [senderNumber,  setSenderNumber]  = useState('')
   const [transactionId, setTransactionId] = useState('')
   const [file,   setFile]   = useState<File | null>(null)
@@ -101,7 +109,7 @@ export default function BookExperience({
   const [copied, setCopied] = useState<'number' | 'amount' | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // ── saved booking id (set after form submit, used during payment upload) ────
+  // â”€â”€ saved booking id (set after form submit, used during payment upload) â”€â”€â”€â”€
   const [pendingBookingId, setPendingBookingId] = useState<number | null>(null)
   const [pendingConfNo,    setPendingConfNo]    = useState<string>('')
 
@@ -125,6 +133,16 @@ export default function BookExperience({
   , [filteredRooms])
   const activeOffers = useMemo(() => seasonalPricing.slice(0, 4), [seasonalPricing])
 
+  // Open booking modal when parent passes a room type id (hotel detail page)
+  useEffect(() => {
+    if (!initialRoomTypeId) return
+    const room = roomTypes.find(r => r.room_type_id === initialRoomTypeId)
+    if (!room) return
+    setSelectedHotel(room.hotel_id)
+    setSelectedRoom(room)
+    setModalStep('form')
+  }, [initialRoomTypeId, roomTypes])
+
   // auto-fill guest name
   useEffect(() => {
     if (!isAuthenticated || !userEmail) return
@@ -137,13 +155,14 @@ export default function BookExperience({
     return () => { cancelled = true }
   }, [isAuthenticated, userEmail])
 
-  // ── helpers ─────────────────────────────────────────────────────────────────
+  // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fmt = (n: number) => `PKR ${n.toLocaleString('en-PK')}`
   const resetModal = () => {
     setSelectedRoom(null); setModalStep('form')
     setBookingForm({ checkIn:'', checkOut:'', adults:'2', children:'0', specialRequests:'', guestFirstName:'', guestLastName:'' })
     setSenderNumber(''); setTransactionId(''); setFile(null); setPreview(null)
     setUploadError(null); setPendingBookingId(null); setPendingConfNo('')
+    onBookingModalClose?.()
   }
 
   async function copyText(text: string, key: 'number' | 'amount') {
@@ -259,15 +278,7 @@ export default function BookExperience({
     setModalStep('payment_choice')
   }
 
-  const handleFormBookWithoutPayment = async (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-    const bookingId = await createBooking('pay_at_hotel')
-    if (!bookingId) return
-    resetModal()
-    router.push(`/book/confirmation/${bookingId}`)
-  }
-
-  // ── Step 2a: Pay at Hotel ─────────────────────────────────────────────────
+  // â”€â”€ Step 2a: Pay at Hotel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handlePayAtHotel = async () => {
     if (!pendingBookingId) return
     setModalStep('submitting')
@@ -281,7 +292,7 @@ export default function BookExperience({
     router.push(`/book/confirmation/${pendingBookingId}`)
   }
 
-  // ── Step 2b: JazzCash — upload screenshot ────────────────────────────────
+  // â”€â”€ Step 2b: JazzCash â€” upload screenshot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleJazzCashSubmit = async () => {
     if (!file)          { setUploadError('Please upload your payment screenshot.'); return }
     if (!senderNumber.trim()) { setUploadError('Please enter the JazzCash number you sent from.'); return }
@@ -317,9 +328,11 @@ export default function BookExperience({
     'Best rate guarantee', 'Loyalty points on every stay',
   ]
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   return (
-    <div className="relative space-y-6">
+    <motion.div className={showCatalog ? 'relative space-y-6' : 'relative'}>
+      {showCatalog && (
+      <>
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-56 w-[88%] rounded-[3rem] bg-gradient-to-r from-amber-100/45 via-orange-100/45 to-orange-50/45 blur-3xl" />
 
       {/* TICKER */}
@@ -505,39 +518,42 @@ export default function BookExperience({
           </div>
         </div>
       </div>
+      </>
+      )}
 
-      {/* ══════════════════════════════════════════════════════════════
-          BOOKING MODAL — multi-step
-      ══════════════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          BOOKING MODAL â€” multi-step
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <AnimatePresence>
         {selectedRoom && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/50 p-4">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/50 p-0 sm:items-center sm:p-4">
             <motion.div initial={{ opacity:0, y:24, scale:0.97 }} animate={{ opacity:1, y:0, scale:1 }}
               exit={{ opacity:0, y:16, scale:0.97 }} transition={{ duration:0.25, ease:[0.16,1,0.3,1] }}
-              className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-[#efdecb] shadow-2xl"
+              className="relative flex w-full max-w-2xl max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl border border-[#efdecb] shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
               style={{ background:'linear-gradient(to bottom,#ffffff,#fdf8f2)' }}>
 
-              {/* Close button — always visible except during submitting */}
+              {/* Close button â€” always visible except during submitting */}
               {modalStep !== 'submitting' && (
-                <button onClick={resetModal} className="absolute right-4 top-4 z-10 rounded-xl border border-[#ead8c4] bg-white/80 p-2 text-stone-500 hover:bg-white transition-colors">
+                <button onClick={resetModal} className="absolute right-3 top-3 z-20 rounded-xl border border-[#ead8c4] bg-white/90 p-2 text-stone-500 shadow-sm hover:bg-white transition-colors sm:right-4 sm:top-4">
                   <X className="h-4 w-4" />
                 </button>
               )}
 
+              <div className="booking-modal-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth">
               <AnimatePresence mode="wait">
 
-                {/* ── STEP: Submitting spinner ── */}
+                {/* â”€â”€ STEP: Submitting spinner â”€â”€ */}
                 {modalStep === 'submitting' && (
                   <motion.div key="submitting" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
                     className="flex flex-col items-center justify-center gap-4 p-16">
                     <Loader2 className="h-10 w-10 animate-spin" style={{ color:'#D4722A' }} />
-                    <p className="text-sm text-stone-500">Processing your booking…</p>
+                    <p className="text-sm text-stone-500">Processing your bookingâ€¦</p>
                   </motion.div>
                 )}
 
-                {/* ── STEP 1: Booking Form ── */}
+                {/* â”€â”€ STEP 1: Booking Form â”€â”€ */}
                 {modalStep === 'form' && (
-                  <motion.div key="form" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-6">
+                  <motion.div key="form" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-4 pb-6 sm:p-6">
                     <div className="mb-4">
                       <h3 className="font-display text-2xl font-bold text-stone-900">{selectedRoom.type_name}</h3>
                       <p className="text-sm text-stone-500">{hotelMap.get(selectedRoom.hotel_id)?.hotel_name}</p>
@@ -591,36 +607,30 @@ export default function BookExperience({
                     </div>
                     <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-semibold" style={{ color:'#D4722A' }}>{formatCurrency(Number(selectedRoom.base_price))}/night</p>
-                      <div className="grid w-full gap-3 sm:w-auto sm:grid-flow-col">
-                        <button type="button" onClick={handleFormBookWithoutPayment}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-stone-900 bg-[#f5f0eb] border border-[#e7d6c3] transition-all hover:bg-[#efe4d7]">
-                          <Check className="h-4 w-4" /> Continue without payment
-                        </button>
-                        <button type="button" onClick={handleFormContinueToPayment}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
-                          style={{ background:'#D4722A', boxShadow:'0 4px 14px rgba(212,114,42,0.4)' }}>
-                          <CalendarDays className="h-4 w-4" /> Continue to Payment
-                        </button>
-                      </div>
+                      <button type="button" onClick={handleFormContinueToPayment}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all hover:opacity-90 sm:w-auto"
+                        style={{ background:'#D4722A', boxShadow:'0 4px 14px rgba(212,114,42,0.4)' }}>
+                        <CalendarDays className="h-4 w-4" /> Book
+                      </button>
                     </div>
                   </motion.div>
                 )}
 
-                {/* ── STEP 2: Payment Choice ── */}
+                {/* â”€â”€ STEP 2: Payment Choice â”€â”€ */}
                 {modalStep === 'payment_choice' && (
-                  <motion.div key="payment_choice" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-6">
+                  <motion.div key="payment_choice" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-4 pb-6 sm:p-6">
                     {/* Back */}
                     <button onClick={() => setModalStep('form')} className="mb-4 inline-flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition-colors">
                       <ArrowLeft className="h-3.5 w-3.5" /> Back to details
                     </button>
 
-                    <div className="mb-6 text-center">
+                    <div className="mb-5 text-center sm:mb-6">
                       <p className="text-[10px] font-bold uppercase tracking-[3px] text-[#D4722A] mb-1">Payment Preference</p>
-                      <h3 className="text-2xl font-bold text-stone-900" style={{ fontFamily:"'Cormorant Garamond',serif" }}>How would you like to pay?</h3>
-                      <p className="text-sm text-stone-500 mt-1">Total stay: <span className="font-semibold text-stone-700">{fmt(amounts.total)}</span> · {amounts.nights} night{amounts.nights > 1 ? 's' : ''}</p>
+                      <h3 className="text-xl font-bold text-stone-900 sm:text-2xl" style={{ fontFamily:"'Cormorant Garamond',serif" }}>How would you like to pay?</h3>
+                      <p className="text-sm text-stone-500 mt-1">Total stay: <span className="font-semibold text-stone-700">{fmt(amounts.total)}</span> Â· {amounts.nights} night{amounts.nights > 1 ? 's' : ''}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       {/* Pay at Hotel */}
                       <button onClick={handlePayAtHotel}
                         className="group relative rounded-2xl border-2 border-[#efdecb] bg-gradient-to-b from-white to-[#fdf8f2] p-5 text-left transition-all hover:border-stone-400 hover:shadow-lg">
@@ -665,7 +675,7 @@ export default function BookExperience({
                           </div>
                           <div className="flex justify-between mb-2">
                             <span className="text-[10px] text-emerald-600">10% Discount</span>
-                            <span className="text-xs font-medium text-emerald-600">− {fmt(amounts.discount)}</span>
+                            <span className="text-xs font-medium text-emerald-600">âˆ’ {fmt(amounts.discount)}</span>
                           </div>
                           <div className="border-t border-dashed border-[#f0c8a8] pt-2 flex justify-between items-center">
                             <span className="text-[10px] uppercase tracking-widest text-stone-400">Pay Now</span>
@@ -683,7 +693,7 @@ export default function BookExperience({
                     </div>
 
                     {/* Trust row */}
-                    <div className="mt-5 flex items-center justify-center gap-5">
+                    <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-5">
                       {[{ icon:Shield, label:'Secure booking' },{ icon:Clock, label:'Fast confirmation' },{ icon:Check, label:'No hidden fees' }].map(({ icon:Icon, label }) => (
                         <div key={label} className="flex items-center gap-1 text-[11px] text-stone-400"><Icon className="h-3 w-3" />{label}</div>
                       ))}
@@ -691,9 +701,9 @@ export default function BookExperience({
                   </motion.div>
                 )}
 
-                {/* ── STEP 3: JazzCash Instructions ── */}
+                {/* â”€â”€ STEP 3: JazzCash Instructions â”€â”€ */}
                 {modalStep === 'jazzcash_instructions' && (
-                  <motion.div key="jazzcash_instructions" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-6">
+                  <motion.div key="jazzcash_instructions" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-4 pb-6 sm:p-6">
                     <button onClick={() => setModalStep('payment_choice')} className="mb-4 inline-flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition-colors">
                       <ArrowLeft className="h-3.5 w-3.5" /> Back
                     </button>
@@ -704,7 +714,7 @@ export default function BookExperience({
 
                     {/* Amount highlight */}
                     <div className="rounded-2xl border border-[#f0c8a8] p-4 mb-4" style={{ background:'linear-gradient(135deg,#fff6ed,#fff2e7)' }}>
-                      <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-[10px] uppercase tracking-widest text-[#b07a56] mb-1">Amount to Send</p>
                           <p className="text-3xl font-bold" style={{ color:'#D4722A', fontFamily:"'Cormorant Garamond',serif" }}>{fmt(amounts.advance)}</p>
@@ -759,9 +769,9 @@ export default function BookExperience({
                   </motion.div>
                 )}
 
-                {/* ── STEP 4: Upload Screenshot ── */}
+                {/* â”€â”€ STEP 4: Upload Screenshot â”€â”€ */}
                 {modalStep === 'jazzcash_upload' && (
-                  <motion.div key="jazzcash_upload" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-6">
+                  <motion.div key="jazzcash_upload" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-20 }} className="p-4 pb-6 sm:p-6">
                     <button onClick={() => setModalStep('jazzcash_instructions')} className="mb-4 inline-flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 transition-colors">
                       <ArrowLeft className="h-3.5 w-3.5" /> Back
                     </button>
@@ -820,16 +830,23 @@ export default function BookExperience({
                       style={{ background:'#D4722A', boxShadow:'0 4px 14px rgba(212,114,42,0.35)' }}>
                       <Upload className="h-4 w-4" /> Submit Payment Proof
                     </button>
-                    <p className="text-center text-xs text-stone-400 mt-3">Booking confirmed after our team verifies your payment · usually within 1–2 hours</p>
+                    <p className="text-center text-xs text-stone-400 mt-3">Booking confirmed after our team verifies your payment Â· usually within 1â€“2 hours</p>
                   </motion.div>
                 )}
 
               </AnimatePresence>
+              </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-    </div>
+      <style>{`
+        .booking-modal-scroll { scrollbar-width: thin; scrollbar-color: #e2a77d #fdf8f2; }
+        .booking-modal-scroll::-webkit-scrollbar { width: 8px; }
+        .booking-modal-scroll::-webkit-scrollbar-thumb { background: #e2a77d; border-radius: 999px; }
+        .booking-modal-scroll::-webkit-scrollbar-track { background: #fdf8f2; }
+      `}</style>
+    </motion.div>
   )
 }
 

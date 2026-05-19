@@ -1,8 +1,9 @@
 'use client'
 
+import type { KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { BedDouble, MapPin, Phone, Star } from 'lucide-react'
+import { BedDouble, CalendarDays, MapPin, Phone, Star } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils/formatters'
 import Image from 'next/image'
 
@@ -20,6 +21,7 @@ type HotelType = {
 
 type RoomType = {
   room_type_id: number
+  hotel_id: number
   type_name: string
   type_category: string
   description: string
@@ -58,10 +60,12 @@ export default function HotelDetailShowcase({
   hotel,
   roomTypes,
   roomAmenities,
+  onRoomBook,
 }: {
   hotel: HotelType
   roomTypes: RoomType[]
   roomAmenities: Record<number, string[]>
+  onRoomBook?: (room: RoomType) => void
 }) {
   return (
     <div className="space-y-8">
@@ -147,12 +151,21 @@ export default function HotelDetailShowcase({
           {roomTypes.map((room, index) => (
             <motion.article
               key={room.room_type_id}
+              role="button"
+              tabIndex={0}
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.04 }}
               whileHover={{ y: -8, rotateX: 2, rotateY: -2 }}
               style={{ transformStyle: 'preserve-3d' }}
-              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-premium transition"
+              className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-premium transition hover:border-[#D4722A]/40 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4722A]/50"
+              onClick={() => onRoomBook?.(room)}
+              onKeyDown={(e: KeyboardEvent<HTMLElement>) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onRoomBook?.(room)
+                }
+              }}
             >
               <div className="relative h-44 overflow-hidden">
                 <Image
@@ -204,6 +217,11 @@ export default function HotelDetailShowcase({
                     </span>
                   ))}
                 </div>
+
+                <span className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#f0c8a8] bg-[#fff2e7] px-4 py-2.5 text-sm font-semibold text-[#D4722A] transition-colors group-hover:bg-[#ffe7d3]">
+                  <CalendarDays className="h-4 w-4" />
+                  Book This Room
+                </span>
               </div>
             </motion.article>
           ))}
