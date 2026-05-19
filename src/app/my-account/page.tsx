@@ -26,12 +26,14 @@ export default async function MyAccountPage() {
     ? `${guestFirstName[0]}${guestLastName[0]}`.toUpperCase()
     : displayName.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
+  // Stats: Total Visits | Pending Bookings | Total Spend | Upcoming | Last Stay
+  // (Total Nights card removed; Pending Bookings card added in its place)
   const stats = [
-    { label: 'Total Visits',  value: account.stats.totalVisits,                                                        color: '#D4722A', bg: '#FFF4ED', border: '#F5C9A8' },
-    { label: 'Total Nights',  value: account.stats.totalNights,                                                        color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-    { label: 'Total Spend',   value: formatCurrency(account.stats.totalSpend),                                         color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-    { label: 'Upcoming',      value: account.stats.upcomingVisits,                                                     color: '#9333EA', bg: '#FDF4FF', border: '#E9D5FF' },
-    { label: 'Last Stay',     value: account.stats.lastVisitDate ? formatDate(account.stats.lastVisitDate) : '—',      color: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' },
+    { label: 'Total Visits',      value: account.stats.totalVisits,                                                  color: '#D4722A', bg: '#FFF4ED', border: '#F5C9A8' },
+    { label: 'Pending Bookings',  value: account.stats.pendingBookings,                                               color: '#CA8A04', bg: '#FEFCE8', border: '#FDE68A' },
+    { label: 'Total Spend',       value: formatCurrency(account.stats.totalSpend),                                    color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
+    { label: 'Upcoming',          value: account.stats.upcomingVisits,                                                color: '#9333EA', bg: '#FDF4FF', border: '#E9D5FF' },
+    { label: 'Last Stay',         value: account.stats.lastVisitDate ? formatDate(account.stats.lastVisitDate) : '—', color: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' },
   ]
 
   return (
@@ -420,7 +422,7 @@ export default async function MyAccountPage() {
                 </div>
                 <div className="acc-meta-pills">
                   <div className="acc-meta-pill">🏨 <span>{account.stats.totalVisits}</span> stays</div>
-                  <div className="acc-meta-pill">🌙 <span>{account.stats.totalNights}</span> nights</div>
+                  <div className="acc-meta-pill">⏳ <span>{account.stats.pendingBookings}</span> pending</div>
                   <div className="acc-meta-pill">💳 <span>{formatCurrency(account.stats.totalSpend)}</span> lifetime</div>
                   {account.stats.upcomingVisits > 0 && (
                     <div className="acc-meta-pill" style={{ borderColor: 'rgba(34,197,94,0.3)', color: '#86EFAC' }}>
@@ -480,8 +482,11 @@ export default async function MyAccountPage() {
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: 6, padding: '2px 8px' }}>
                     {account.stats.upcomingVisits} upcoming
                   </span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#FEFCE8', border: '1px solid #FDE68A', color: '#CA8A04', borderRadius: 6, padding: '2px 8px' }}>
+                    {account.stats.pendingBookings} pending
+                  </span>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#16A34A', borderRadius: 6, padding: '2px 8px' }}>
-                    {account.stats.totalVisits} total
+                    {account.stats.totalVisits} stays
                   </span>
                 </div>
               </div>

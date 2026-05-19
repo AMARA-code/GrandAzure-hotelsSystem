@@ -19,6 +19,7 @@ function buildBookingConfirmationEmail(data: {
   totalAmount: number
   taxAmount: number
   specialRequests: string | null
+  receiptUrl?: string | null
 }): string {
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(n)
@@ -150,6 +151,12 @@ function buildBookingConfirmationEmail(data: {
                 </td>
               </tr>
             </table>
+            ${data.receiptUrl ? `
+            <div style="padding:12px 0 0;text-align:center;">
+              <a href="${data.receiptUrl}" style="display:inline-block;padding:10px 14px;background:#D4722A;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">View Your Payment Receipt</a>
+              <p style="margin:8px 0 0;font-size:12px;color:#6b5444;">Your receipt is attached above. We will include this in your confirmation email.</p>
+            </div>
+            ` : ''}
           </td>
         </tr>
 
@@ -243,6 +250,11 @@ export async function POST(request: NextRequest) {
           hotel_name,
           city
         ),
+        jazzcash_screenshot_url,
+        jazzcash_sender_number,
+        jazzcash_transaction_id,
+        payment_method,
+        payment_status,
         booking_rooms (
           room_types (
             type_name
@@ -291,6 +303,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, emailSent: false, reason: 'No guest email on record' })
     }
 
+    // If there's an uploaded JazzCash screenshot, create a signed URL for inclusion in the email
+    let receiptUrl: string | null = null
+    try {
+      if (booking.jazzcash_screenshot_url) {
+        const { data: signed, error: signErr } = await supabase.storage
+          .from('payment-proofs')
+          .createSignedUrl(booking.jazzcash_screenshot_url, 60 * 60)
+        if (!signErr && signed?.signedUrl) receiptUrl = signed.signedUrl
+      }
+    } catch (e) {
+      // non-fatal
+      console.warn('[confirm] failed to create signed URL for receipt', e)
+    }
+
     const html = buildBookingConfirmationEmail({
       guestName,
       confirmationNo: booking.confirmation_no,
@@ -305,6 +331,7 @@ export async function POST(request: NextRequest) {
       totalAmount: Number(booking.total_amount),
       taxAmount: Number(booking.tax_amount),
       specialRequests: booking.special_requests,
+      receiptUrl,
     })
 
     const { error: emailError } = await resend.emails.send({

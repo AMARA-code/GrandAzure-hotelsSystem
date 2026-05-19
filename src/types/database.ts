@@ -1,6 +1,7 @@
 export type HotelStatus = 'active' | 'inactive'
 export type RoomStatus = 'available' | 'occupied' | 'dirty' | 'maintenance' | 'blocked'
 export type BookingStatus =
+  | 'pending'
   | 'pending_payment'   // NEW — guest chose advance pay, waiting for screenshot upload
   | 'pending_approval'  // NEW — submitted (either pay-at-hotel or payment uploaded), awaiting admin
   | 'confirmed'

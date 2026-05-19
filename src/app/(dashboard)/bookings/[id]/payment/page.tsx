@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
-import PaymentChoice from '@/components/guest-portal/PaymentChoice'
-import JazzCashPayment from '@/components/guest-portal/JazzCashPayment'
+import PaymentChoice from '../../../../../components/guest-portal/PaymentChoice'
+import JazzCashPayment from '../../../../../components/guest-portal/JazzCashPayment'
 import type { Booking } from '@/types/database'
 
 type PageStep = 'loading' | 'choice' | 'jazzcash' | 'success' | 'error'
@@ -60,24 +60,24 @@ export default function PaymentPage() {
   // ── Handlers ─────────────────────────────────────────────────────
   const handleChoice = async (choice: 'pay_at_hotel' | 'jazzcash') => {
     if (choice === 'jazzcash') {
-      // Save payment method + discount to booking, set status = pending_payment
+      // Save payment method + discount to booking, keep legacy pending status
       await supabase.from('bookings').update({
         payment_method:         'jazzcash',
         discount_applied:       true,
         discount_amount:        discountAmount,
         advance_payment_amount: advanceAmount,
         total_amount:           advanceAmount,  // update total to discounted price
-        booking_status:         'pending_payment',
+        booking_status:         'pending',
       }).eq('booking_id', bookingId)
 
       setStep('jazzcash')
     } else {
-      // Pay at hotel — save and mark pending_approval immediately
+      // Pay at hotel — save and keep legacy pending status
       setIsSaving(true)
       await supabase.from('bookings').update({
         payment_method:   'pay_at_hotel',
         discount_applied: false,
-        booking_status:   'pending_approval',
+        booking_status:   'pending',
         payment_status:   'pending',
       }).eq('booking_id', bookingId)
       setIsSaving(false)

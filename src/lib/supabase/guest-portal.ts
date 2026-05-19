@@ -204,7 +204,14 @@ export async function getGuestAccountSnapshot(userEmail: string | null) {
     return {
       guest: null,
       bookings: [],
-      stats: { totalVisits: 0, totalNights: 0, totalSpend: 0, upcomingVisits: 0, lastVisitDate: null as string | null },
+      stats: {
+        totalVisits: 0,
+        totalNights: 0,
+        totalSpend: 0,
+        upcomingVisits: 0,
+        pendingBookings: 0,
+        lastVisitDate: null as string | null,
+      },
     }
   }
 
@@ -220,7 +227,14 @@ export async function getGuestAccountSnapshot(userEmail: string | null) {
     return {
       guest: null,
       bookings: [],
-      stats: { totalVisits: 0, totalNights: 0, totalSpend: 0, upcomingVisits: 0, lastVisitDate: null as string | null },
+      stats: {
+        totalVisits: 0,
+        totalNights: 0,
+        totalSpend: 0,
+        upcomingVisits: 0,
+        pendingBookings: 0,
+        lastVisitDate: null as string | null,
+      },
     }
   }
 
@@ -231,16 +245,48 @@ export async function getGuestAccountSnapshot(userEmail: string | null) {
     .order('check_in_date', { ascending: false })
 
   const bookingRows = bookings ?? []
-  const now = new Date().toISOString().slice(0, 10)
-  const totalVisits = bookingRows.length
-  const totalNights = bookingRows.reduce((sum, row) => sum + Number(row.total_nights ?? 0), 0)
-  const totalSpend = bookingRows.reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0)
-  const upcomingVisits = bookingRows.filter((row) => String(row.check_in_date) >= now).length
-  const lastVisitDate = bookingRows[0]?.check_in_date ?? null
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Checked-out / completed stays only — the true "past" visits
+  const checkedOutRows = bookingRows.filter((row) => {
+    const s = String(row.booking_status).toLowerCase()
+    return s === 'checked_out' || s === 'completed'
+  })
+
+  // Confirmed bookings with a future check-in date
+  const upcomingConfirmed = bookingRows.filter(
+    (row) =>
+      String(row.booking_status).toLowerCase() === 'confirmed' &&
+      String(row.check_in_date) >= today
+  )
+
+  // Pending bookings (any date)
+  const pendingBookings = bookingRows.filter(
+    (row) => String(row.booking_status).toLowerCase() === 'pending'
+  ).length
+
+  // Visits & nights: checked-out / completed stays only
+  const totalVisits = checkedOutRows.length
+  const totalNights = checkedOutRows.reduce((sum, row) => sum + Number(row.total_nights ?? 0), 0)
+
+  // Spend: checked-out / completed stays only (actual past payments)
+  const totalSpend = checkedOutRows.reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0)
+
+  const upcomingVisits = upcomingConfirmed.length
+
+  // Last stay date: most recent checked-out check_out date
+  const lastVisitDate =
+    checkedOutRows.length > 0
+      ? String(
+          [...checkedOutRows].sort((a, b) =>
+            String(b.check_out_date).localeCompare(String(a.check_out_date))
+          )[0].check_out_date
+        )
+      : null
 
   return {
     guest,
     bookings: bookingRows,
-    stats: { totalVisits, totalNights, totalSpend, upcomingVisits, lastVisitDate },
+    stats: { totalVisits, totalNights, totalSpend, upcomingVisits, pendingBookings, lastVisitDate },
   }
 }

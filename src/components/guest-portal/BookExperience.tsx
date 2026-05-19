@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef, type MouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarDays, Filter, Hotel, Sparkles, Users, X,
@@ -14,7 +14,6 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { useRef } from 'react'
 
 type HotelType  = { hotel_id: number; hotel_name: string; city: string }
 type RoomType   = {
@@ -149,48 +148,53 @@ export default function BookExperience({
 
   async function copyText(text: string, key: 'number' | 'amount') {
     await navigator.clipboard.writeText(text)
-    setCopied(key); setTimeout(() => setCopied(null), 2000)
+    setCopied(key)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]; if (!f) return
+    const f = e.target.files?.[0]
+    if (!f) return
     if (!f.type.startsWith('image/')) { setUploadError('Please upload an image file.'); return }
     if (f.size > 5 * 1024 * 1024)    { setUploadError('File must be under 5 MB.'); return }
     setUploadError(null); setFile(f); setPreview(URL.createObjectURL(f))
   }
 
-  // ── Step 1: validate form → save booking → go to payment choice ─────────────
-  const handleFormNext = async () => {
-    if (!selectedRoom) return
-    if (!isAuthenticated || !userEmail) { toast.error('Please sign in to book.'); router.push('/login'); return }
+  async function createBooking(
+    paymentMethod: 'jazzcash' | 'pay_at_hotel' | null
+  ) {
+    if (!selectedRoom) return null
+    if (!isAuthenticated || !userEmail) { toast.error('Please sign in to book.'); router.push('/login'); return null }
 
     const checkIn  = new Date(bookingForm.checkIn)
     const checkOut = new Date(bookingForm.checkOut)
     const nights   = Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86400000)
 
-    if (!bookingForm.checkIn || !bookingForm.checkOut || nights <= 0) { toast.error('Please select valid dates.'); return }
-    if (bookingForm.checkIn < todayYMD)                               { toast.error('Check-in must be today or later.'); return }
-    if (bookingForm.checkOut <= bookingForm.checkIn)                  { toast.error('Check-out must be after check-in.'); return }
-    if (!bookingForm.guestFirstName.trim() || !bookingForm.guestLastName.trim()) { toast.error('Please enter guest name.'); return }
+    if (!bookingForm.checkIn || !bookingForm.checkOut || nights <= 0) { toast.error('Please select valid dates.'); return null }
+    if (bookingForm.checkIn < todayYMD)                              { toast.error('Check-in must be today or later.'); return null }
+    if (bookingForm.checkOut <= bookingForm.checkIn)                 { toast.error('Check-out must be after check-in.'); return null }
+    if (!bookingForm.guestFirstName.trim() || !bookingForm.guestLastName.trim()) { toast.error('Please enter guest name.'); return null }
 
     setModalStep('submitting')
 
     try {
-      // upsert guest
       let { data: guest } = await supabase.from('guests').select('guest_id').eq('email', userEmail).maybeSingle()
       if (!guest) {
         const { data: ng, error: ge } = await supabase.from('guests').insert({
           first_name: bookingForm.guestFirstName.trim(), last_name: bookingForm.guestLastName.trim(),
           email: userEmail, phone: '+92-000-0000000', vip_status: 'none', marketing_opt_in: true,
         }).select('guest_id').single()
-        if (ge || !ng) { toast.error('Could not create guest profile.'); setModalStep('form'); return }
+        if (ge || !ng) { toast.error('Could not create guest profile.'); setModalStep('form'); return null }
         guest = ng
       } else {
-        await supabase.from('guests').update({ first_name: bookingForm.guestFirstName.trim(), last_name: bookingForm.guestLastName.trim() }).eq('guest_id', guest.guest_id)
+        await supabase.from('guests').update({
+          first_name: bookingForm.guestFirstName.trim(),
+          last_name: bookingForm.guestLastName.trim(),
+        }).eq('guest_id', guest.guest_id)
       }
 
       const ratePlan = ratePlans.find(p => p.hotel_id === selectedRoom.hotel_id) ?? ratePlans[0]
-      if (!ratePlan) { toast.error('No rate plan found.'); setModalStep('form'); return }
+      if (!ratePlan) { toast.error('No rate plan found.'); setModalStep('form'); return null }
 
       const subtotal     = Number(selectedRoom.base_price) * nights
       const taxAmount    = Math.round(subtotal * 0.16)
@@ -198,44 +202,69 @@ export default function BookExperience({
       const confirmationNo = `GAZ-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
 
       const { data: booking, error: bookingError } = await supabase.from('bookings').insert({
-        hotel_id: selectedRoom.hotel_id, guest_id: guest.guest_id,
-        channel_id: 1, rate_plan_id: ratePlan.rate_plan_id,
-        confirmation_no: confirmationNo, booking_status: 'pending_payment',
-        booking_source: 'online', check_in_date: bookingForm.checkIn,
-        check_out_date: bookingForm.checkOut, adults: Number(bookingForm.adults),
-        children: Number(bookingForm.children), total_nights: nights,
-        total_amount: totalAmount, tax_amount: taxAmount,
+        hotel_id: selectedRoom.hotel_id,
+        guest_id: guest.guest_id,
+        channel_id: 1,
+        rate_plan_id: ratePlan.rate_plan_id,
+        confirmation_no: confirmationNo,
+        booking_status: 'pending',
+        booking_source: 'online',
+        check_in_date: bookingForm.checkIn,
+        check_out_date: bookingForm.checkOut,
+        adults: Number(bookingForm.adults),
+        children: Number(bookingForm.children),
+        total_nights: nights,
+        total_amount: totalAmount,
+        tax_amount: taxAmount,
         loyalty_points_earned: Math.floor(totalAmount / 1000),
         special_requests: bookingForm.specialRequests || null,
-        payment_method: null, discount_applied: false,
+        payment_method: paymentMethod,
+        payment_status: paymentMethod === 'pay_at_hotel' ? 'pending' : 'pending',
+        discount_applied: paymentMethod === 'jazzcash',
       }).select('booking_id').single()
 
-      if (bookingError || !booking) { toast.error(bookingError?.message ?? 'Booking failed.'); setModalStep('form'); return }
+      if (bookingError || !booking) { toast.error(bookingError?.message ?? 'Booking failed.'); setModalStep('form'); return null }
 
-      // assign room
       const { data: availableRoom } = await supabase.from('rooms').select('room_id')
         .eq('hotel_id', selectedRoom.hotel_id).eq('room_type_id', selectedRoom.room_type_id)
         .eq('status', 'available').limit(1).maybeSingle()
       if (availableRoom) {
         await supabase.from('booking_rooms').insert({
-          booking_id: booking.booking_id, room_id: availableRoom.room_id,
-          room_type_id: selectedRoom.room_type_id, rate_per_night: Number(selectedRoom.base_price),
-          extra_bed: false, extra_bed_charge: 0,
+          booking_id: booking.booking_id,
+          room_id: availableRoom.room_id,
+          room_type_id: selectedRoom.room_type_id,
+          rate_per_night: Number(selectedRoom.base_price),
+          extra_bed: false,
+          extra_bed_charge: 0,
         })
       }
 
-      // store computed amounts + move to payment choice
       const discountAmt = Math.round(totalAmount * DISCOUNT_RATE)
       setAmounts({ total: totalAmount, discount: discountAmt, advance: totalAmount - discountAmt, nights })
       setPendingBookingId(booking.booking_id)
       setPendingConfNo(confirmationNo)
-      setModalStep('payment_choice')
-
+      return booking.booking_id
     } catch (err) {
       console.error(err)
       toast.error('Something went wrong. Please try again.')
       setModalStep('form')
+      return null
     }
+  }
+
+  const handleFormContinueToPayment = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    const bookingId = await createBooking('jazzcash')
+    if (!bookingId) return
+    setModalStep('payment_choice')
+  }
+
+  const handleFormBookWithoutPayment = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    const bookingId = await createBooking('pay_at_hotel')
+    if (!bookingId) return
+    resetModal()
+    router.push(`/book/confirmation/${bookingId}`)
   }
 
   // ── Step 2a: Pay at Hotel ─────────────────────────────────────────────────
@@ -243,7 +272,7 @@ export default function BookExperience({
     if (!pendingBookingId) return
     setModalStep('submitting')
     await supabase.from('bookings').update({
-      booking_status: 'pending_approval',
+      booking_status: 'pending',
       payment_method: 'pay_at_hotel',
       payment_status: 'pending',
       discount_applied: false,
@@ -560,13 +589,19 @@ export default function BookExperience({
                           value={bookingForm.specialRequests} onChange={e => setBookingForm(p => ({ ...p, specialRequests: e.target.value }))} />
                       </label>
                     </div>
-                    <div className="mt-5 flex items-center justify-between">
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-semibold" style={{ color:'#D4722A' }}>{formatCurrency(Number(selectedRoom.base_price))}/night</p>
-                      <button onClick={handleFormNext}
-                        className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
-                        style={{ background:'#D4722A', boxShadow:'0 4px 14px rgba(212,114,42,0.4)' }}>
-                        <CalendarDays className="h-4 w-4" /> Continue to Payment
-                      </button>
+                      <div className="grid w-full gap-3 sm:w-auto sm:grid-flow-col">
+                        <button type="button" onClick={handleFormBookWithoutPayment}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-stone-900 bg-[#f5f0eb] border border-[#e7d6c3] transition-all hover:bg-[#efe4d7]">
+                          <Check className="h-4 w-4" /> Continue without payment
+                        </button>
+                        <button type="button" onClick={handleFormContinueToPayment}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
+                          style={{ background:'#D4722A', boxShadow:'0 4px 14px rgba(212,114,42,0.4)' }}>
+                          <CalendarDays className="h-4 w-4" /> Continue to Payment
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 )}

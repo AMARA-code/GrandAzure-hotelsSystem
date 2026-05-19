@@ -58,7 +58,7 @@ export default function AdminPaymentVerification({
       const res = await fetch('/api/bookings/confirm', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ booking_id: booking.booking_id }),
+        body:    JSON.stringify({ bookingId: booking.booking_id }),
       })
       const data = await res.json()
 
@@ -82,6 +82,7 @@ export default function AdminPaymentVerification({
   const isAlreadyConfirmed = booking.booking_status === 'confirmed'
   const isPendingApproval  = booking.booking_status === 'pending_approval'
   const isPendingPayment   = booking.booking_status === 'pending_payment'
+  const isPending          = booking.booking_status === 'pending'
   const isJazzCash         = booking.payment_method === 'jazzcash'
 
   const discountAmount  = booking.discount_amount ?? 0
@@ -230,7 +231,7 @@ export default function AdminPaymentVerification({
         )}
 
         {/* ── Confirm button ── */}
-        {!isAlreadyConfirmed && !result?.success && (isPendingApproval || isPendingPayment) && (
+        {!isAlreadyConfirmed && !result?.success && (isPendingApproval || isPendingPayment || isPending) && (
           <div className="space-y-3">
             {isJazzCash && !screenshotUrl && !isLoadingUrl && (
               <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

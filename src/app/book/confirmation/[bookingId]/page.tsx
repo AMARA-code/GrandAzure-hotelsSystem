@@ -198,6 +198,10 @@ export default function BookingConfirmationPage() {
   const [booking, setBooking] = useState<BookingSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<'loading' | 'reveal' | 'done'>('loading')
+  const [isJazzCash, setIsJazzCash] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null)
+  const [advanceAmount, setAdvanceAmount] = useState<number>(0)
+  const [discountAmount, setDiscountAmount] = useState<number>(0)
 
   useEffect(() => {
     if (!bookingId) return
@@ -212,6 +216,10 @@ export default function BookingConfirmationPage() {
           check_out_date,
           total_nights,
           total_amount,
+          payment_method,
+          payment_status,
+          advance_payment_amount,
+          discount_amount,
           guests ( first_name, last_name ),
           hotels ( hotel_name, city ),
           booking_rooms ( room_types ( type_name ) )
@@ -234,6 +242,11 @@ export default function BookingConfirmationPage() {
           hotel_city: h?.city ?? 'Pakistan',
           room_type: br?.[0]?.room_types?.type_name ?? 'Deluxe Room',
         })
+        // Store payment-related state for conditional UI
+        setIsJazzCash(Boolean(data.payment_method === 'jazzcash'))
+        setPaymentStatus(String(data.payment_status ?? ''))
+        setAdvanceAmount(Number(data.advance_payment_amount ?? 0))
+        setDiscountAmount(Number(data.discount_amount ?? 0))
       }
       setLoading(false)
     }
@@ -473,16 +486,29 @@ export default function BookingConfirmationPage() {
 
                 {/* Body */}
                 <div className="px-5 py-4 space-y-2">
-                  <p className="text-sm leading-relaxed" style={{ color: '#292524' }}>
-                    Your booking has been received and is currently under review by our reservations team.
-                  </p>
-                  <p className="text-sm leading-relaxed" style={{ color: '#78716C' }}>
-                    Once confirmed, you will receive a{' '}
-                    <span className="font-semibold" style={{ color: '#292524' }}>
-                      confirmation email
-                    </span>{' '}
-                    with your full booking details and check-in instructions.
-                  </p>
+                  {isJazzCash && (paymentStatus === 'pending_verification' || paymentStatus === 'pending') ? (
+                    <>
+                      <p className="text-sm leading-relaxed" style={{ color: '#292524' }}>
+                        We have received your payment proof and are verifying it. Thank you — this helps us confirm your booking faster.
+                      </p>
+                      <p className="text-sm leading-relaxed" style={{ color: '#78716C' }}>
+                        We will send you a <span className="font-semibold" style={{ color: '#292524' }}>receipt</span> along with the confirmation email. Your booking is under review and will be confirmed once verification is complete.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm leading-relaxed" style={{ color: '#292524' }}>
+                        Your booking has been received and is currently under review by our reservations team.
+                      </p>
+                      <p className="text-sm leading-relaxed" style={{ color: '#78716C' }}>
+                        Once confirmed, you will receive a{' '}
+                        <span className="font-semibold" style={{ color: '#292524' }}>
+                          confirmation email
+                        </span>{' '}
+                        with your full booking details and check-in instructions.
+                      </p>
+                    </>
+                  )}
                 </div>
               </motion.div>
 
@@ -533,23 +559,25 @@ export default function BookingConfirmationPage() {
                     ))}
                   </div>
 
-                  {/* Total */}
+                  {/* Total / Advance display */}
                   <div
                     className="flex items-center justify-between px-5 py-3"
                     style={{
                       borderTop: '1.5px solid #F0EDE8',
-                      background: 'rgba(212,114,42,0.05)', // very subtle terracotta tint
+                      background: 'rgba(212,114,42,0.05)',
                     }}
                   >
-                    <p
-                      className="text-xs font-semibold uppercase tracking-widest"
-                      style={{ color: '#78716C' }}
-                    >
-                      Total Amount
-                    </p>
-                    <p className="text-base font-bold" style={{ color: '#D4722A' }}>
-                      {formatCurrency(booking.total_amount)}
-                    </p>
+                    {isJazzCash && advanceAmount > 0 ? (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#78716C' }}>Advance Paid</p>
+                        <p className="text-base font-bold" style={{ color: '#D4722A' }}>{formatCurrency(advanceAmount)}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#78716C' }}>Total Amount</p>
+                        <p className="text-base font-bold" style={{ color: '#D4722A' }}>{formatCurrency(booking.total_amount)}</p>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               )}
