@@ -26,42 +26,20 @@ export default async function MyAccountPage() {
     ? `${guestFirstName[0]}${guestLastName[0]}`.toUpperCase()
     : displayName.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
-  // ─── Recompute all stats from the actual bookings array ───────────────────
-  // This ensures the hero pills, stat cards, info cards, and booking rows are
-  // all consistent with the same source of truth.
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const correctedStats = {
-    totalVisits: account.bookings.filter(b => {
-      const s = String(b.booking_status ?? '').toLowerCase()
-      return s === 'checked_out' || s === 'completed'
-    }).length,
-
-    pendingBookings: account.bookings.filter(b =>
-      String(b.booking_status ?? '').toLowerCase() === 'pending'
-    ).length,
-
-    totalSpend: account.bookings
-      .filter(b => String(b.booking_status ?? '').toLowerCase() !== 'cancelled')
-      .reduce((sum, b) => sum + Number(b.total_amount ?? 0), 0),
-
-    upcomingVisits: account.bookings.filter(b => {
-      const s = String(b.booking_status ?? '').toLowerCase()
-      const checkIn = new Date(String(b.check_in_date))
-      return (s === 'confirmed' || s === 'pending') && checkIn >= today
-    }).length,
-
-    lastVisitDate: account.stats.lastVisitDate, // keep DB value for last stay date
-  }
-  // ──────────────────────────────────────────────────────────────────────────
+  // ─── Use stats computed in guest-portal.ts (single source of truth) ───────
+  // totalVisits    = checked_out / completed bookings only
+  // pendingBookings = pending bookings (any date)
+  // totalSpend     = sum of checked_out / completed total_amount only
+  // upcomingVisits = confirmed bookings with future check_in_date
+  // lastVisitDate  = most recent check_out_date among checked_out rows
+  const { totalVisits, pendingBookings, totalSpend, upcomingVisits, lastVisitDate } = account.stats
 
   const stats = [
-    { label: 'Total Visits',      value: correctedStats.totalVisits,                                                              color: '#D4722A', bg: '#FFF4ED', border: '#F5C9A8' },
-    { label: 'Pending Bookings',  value: correctedStats.pendingBookings,                                                           color: '#CA8A04', bg: '#FEFCE8', border: '#FDE68A' },
-    { label: 'Total Spend',       value: formatCurrency(correctedStats.totalSpend),                                                color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-    { label: 'Upcoming',          value: correctedStats.upcomingVisits,                                                            color: '#9333EA', bg: '#FDF4FF', border: '#E9D5FF' },
-    { label: 'Last Stay',         value: correctedStats.lastVisitDate ? formatDate(correctedStats.lastVisitDate) : '—',            color: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' },
+    { label: 'Total Visits',      value: totalVisits,                                           color: '#D4722A', bg: '#FFF4ED', border: '#F5C9A8' },
+    { label: 'Pending Bookings',  value: pendingBookings,                                        color: '#CA8A04', bg: '#FEFCE8', border: '#FDE68A' },
+    { label: 'Total Spend',       value: formatCurrency(totalSpend),                             color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
+    { label: 'Upcoming',          value: upcomingVisits,                                         color: '#9333EA', bg: '#FDF4FF', border: '#E9D5FF' },
+    { label: 'Last Stay',         value: lastVisitDate ? formatDate(lastVisitDate) : '—',        color: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' },
   ]
 
   return (
@@ -445,12 +423,12 @@ export default async function MyAccountPage() {
                   </span>
                 </div>
                 <div className="acc-meta-pills">
-                  <div className="acc-meta-pill">🏨 <span>{correctedStats.totalVisits}</span> stays</div>
-                  <div className="acc-meta-pill">⏳ <span>{correctedStats.pendingBookings}</span> pending</div>
-                  <div className="acc-meta-pill">💳 <span>{formatCurrency(correctedStats.totalSpend)}</span> lifetime</div>
-                  {correctedStats.upcomingVisits > 0 && (
+                  <div className="acc-meta-pill">🏨 <span>{totalVisits}</span> stays</div>
+                  <div className="acc-meta-pill">⏳ <span>{pendingBookings}</span> pending</div>
+                  <div className="acc-meta-pill">💳 <span>{formatCurrency(totalSpend)}</span> lifetime</div>
+                  {upcomingVisits > 0 && (
                     <div className="acc-meta-pill" style={{ borderColor: 'rgba(34,197,94,0.3)', color: '#86EFAC' }}>
-                      ✈️ <span style={{ color: '#86EFAC' }}>{correctedStats.upcomingVisits}</span> upcoming
+                      ✈️ <span style={{ color: '#86EFAC' }}>{upcomingVisits}</span> upcoming
                     </div>
                   )}
                 </div>
@@ -503,13 +481,13 @@ export default async function MyAccountPage() {
                 <div className="acc-card-sub">Your upcoming and past stays and booking timeline.</div>
                 <div style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: 6, padding: '2px 8px' }}>
-                    {correctedStats.upcomingVisits} upcoming
+                    {upcomingVisits} upcoming
                   </span>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#FEFCE8', border: '1px solid #FDE68A', color: '#CA8A04', borderRadius: 6, padding: '2px 8px' }}>
-                    {correctedStats.pendingBookings} pending
+                    {pendingBookings} pending
                   </span>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#16A34A', borderRadius: 6, padding: '2px 8px' }}>
-                    {correctedStats.totalVisits} stays
+                    {totalVisits} stays
                   </span>
                 </div>
               </div>

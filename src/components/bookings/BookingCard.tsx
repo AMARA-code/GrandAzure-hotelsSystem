@@ -28,21 +28,35 @@ const channelColors: Record<string, string> = {
 }
 
 const hotelAccents: Record<number, { bar: string; badge: string }> = {
-  1: { bar: 'from-azure-500 to-azure-700',   badge: 'bg-azure-50 text-azure-700 border-azure-200'   },
+  1: { bar: 'from-azure-500 to-azure-700',     badge: 'bg-azure-50 text-azure-700 border-azure-200'     },
   2: { bar: 'from-emerald-500 to-emerald-700', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  3: { bar: 'from-violet-500 to-violet-700',  badge: 'bg-violet-50 text-violet-700 border-violet-200'  },
+  3: { bar: 'from-violet-500 to-violet-700',   badge: 'bg-violet-50 text-violet-700 border-violet-200'   },
 }
 
 export default function BookingCard({ booking, index }: BookingCardProps) {
-  const vip         = vipColors[booking.guest?.vip_status as keyof typeof vipColors] ?? vipColors.none
+  const vip          = vipColors[booking.guest?.vip_status as keyof typeof vipColors] ?? vipColors.none
   const channelColor = channelColors[booking.channel?.channel_type] ?? channelColors.direct
-  const hotelId     = booking.hotel?.hotel_id ?? 1
-  const accent      = hotelAccents[hotelId] ?? hotelAccents[1]
+  const hotelId      = booking.hotel?.hotel_id ?? 1
+  const accent       = hotelAccents[hotelId] ?? hotelAccents[1]
 
-  const bookingTotal = Number(booking.total_amount ?? 0)
-  const rawPaid      = Number(booking.paid_amount ?? 0)
-  const paidShown    = bookingTotal > 0 ? Math.min(rawPaid, bookingTotal) : rawPaid
-  const balanceDue   = Math.max(0, bookingTotal - paidShown)
+  const bookingTotal   = Number(booking.total_amount ?? 0)
+  const discountAmount = Number(booking.discount_amount ?? 0)
+
+  // Use advance_payment_amount as the source of truth for JazzCash payments.
+  // The invoice paid_amount may be 0 while payment is still pending verification,
+  // so we take whichever is greater to always show the correct collected amount.
+  const invoicePaid = Number(booking.paid_amount ?? 0)
+  const advancePaid = Number(booking.advance_payment_amount ?? 0)
+  const rawPaid     = Math.max(invoicePaid, advancePaid)
+
+  // The effective total is what the guest actually owes after any discount.
+  // For bookings where submit-payment already updated total_amount, discount
+  // is already baked in. For older bookings it may not be, so we subtract it
+  // explicitly here to guarantee balance_due is correct in both cases.
+  const effectiveTotal = Math.max(0, bookingTotal - discountAmount)
+  const paidShown      = effectiveTotal > 0 ? Math.min(rawPaid, effectiveTotal) : rawPaid
+  const balanceDue     = Math.max(0, effectiveTotal - paidShown)
+  const isFullyPaid    = balanceDue === 0 && paidShown > 0
 
   return (
     <motion.div
@@ -62,7 +76,6 @@ export default function BookingCard({ booking, index }: BookingCardProps) {
           {/* Top Row — Guest name + Status */}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              {/* Guest Name */}
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-bold text-slate-900 text-base leading-tight">
                   {booking.guest?.first_name} {booking.guest?.last_name}
@@ -77,7 +90,6 @@ export default function BookingCard({ booking, index }: BookingCardProps) {
                   </span>
                 )}
               </div>
-              {/* Confirmation No */}
               <p className="text-xs text-slate-400 mt-0.5 font-mono">
                 {booking.confirmation_no}
               </p>
@@ -144,23 +156,28 @@ export default function BookingCard({ booking, index }: BookingCardProps) {
               {booking.channel?.channel_name ?? 'Direct'}
             </span>
             <div className="text-right space-y-0.5">
-              {bookingTotal > 0 ? (
+              {effectiveTotal > 0 ? (
                 <>
                   <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Total / Paid
                   </p>
                   <p className="text-base font-bold text-slate-900 leading-tight">
-                    {formatCurrency(bookingTotal)}
+                    {formatCurrency(effectiveTotal)}
                     <span className="text-slate-300 font-normal mx-1">·</span>
-                    <span className={paidShown < bookingTotal ? 'text-azure-600' : 'text-emerald-600'}>
+                    <span className={isFullyPaid ? 'text-emerald-600' : paidShown > 0 ? 'text-azure-600' : 'text-slate-400'}>
                       {formatCurrency(paidShown)}
                     </span>
                   </p>
-                  {balanceDue > 0 && (
+                  {/* Only show Due line when there is a real outstanding balance */}
+                  {balanceDue > 0 ? (
                     <p className="text-[11px] text-amber-700 font-medium">
                       Due {formatCurrency(balanceDue)}
                     </p>
-                  )}
+                  ) : paidShown > 0 ? (
+                    <p className="text-[11px] text-emerald-600 font-medium">
+                      Settled ✓
+                    </p>
+                  ) : null}
                 </>
               ) : (
                 <p className="text-slate-400 text-sm">No amount set</p>
@@ -172,6 +189,7 @@ export default function BookingCard({ booking, index }: BookingCardProps) {
               )}
             </div>
           </div>
+
         </div>
       </Link>
     </motion.div>

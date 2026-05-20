@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
       .select(`
         booking_id,
         booking_status,
+        hotel_id,
+        guest_id,
+        total_amount,
+        tax_amount,
+        discount_amount,
+        confirmation_no,
+        check_in_date,
         guests!inner ( email )
       `)
       .eq('booking_id', bookingId)
@@ -64,6 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Booking is not awaiting payment proof' }, { status: 400 })
     }
 
+    // ── Upload screenshot to storage ──────────────────────────────────────
     const safeFilename = screenshot.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const storagePath = `bookings/${bookingId}/${Date.now()}-${safeFilename}`
     const fileBuffer = Buffer.from(await screenshot.arrayBuffer())
@@ -93,13 +101,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ── Compute the canonical total after discount ─────────────────────────
+    // When a discount is applied, the guest has paid the discounted amount
+    // as full and final settlement. The invoice total must be updated to
+    // match what was actually charged — otherwise balance_due stays wrong.
+    const originalTotal   = Number(booking.total_amount ?? 0)
+    const invoiceTotalAmount = discountAmount > 0
+      ? advanceAmount       // discounted price IS the new total; nothing more owed
+      : originalTotal
+
+    // ── Update booking row ────────────────────────────────────────────────
     const { error: updateError } = await supabaseAdmin
       .from('bookings')
       .update({
         payment_method: 'jazzcash',
-        discount_applied: true,
+        discount_applied: discountAmount > 0,
         discount_amount: discountAmount || null,
         advance_payment_amount: advanceAmount || null,
+        // KEY FIX: persist the discounted total so admin panel shows correct amount
+        total_amount: invoiceTotalAmount,
         booking_status: 'pending',
         payment_status: 'pending_verification',
         jazzcash_screenshot_url: storagePath,
@@ -111,6 +131,70 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('[submit-payment] booking update failed:', updateError)
       return NextResponse.json({ error: 'Failed to update booking payment details' }, { status: 500 })
+    }
+
+    // ── Upsert invoice row ────────────────────────────────────────────────
+    const { data: existingInvoice } = await supabaseAdmin
+      .from('invoices')
+      .select('invoice_id, total_amount')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+
+    const taxAmount       = Number(booking.tax_amount ?? 0)
+    const bookingDiscount = discountAmount || Number(booking.discount_amount ?? 0)
+    // subtotal = room charges before tax, before discount
+    const subtotal        = originalTotal - taxAmount
+    const taxRate         = subtotal > 0 ? Math.round((taxAmount / subtotal) * 100) : 16
+    // With a discount, the guest has settled in full — balance is 0
+    const balanceDue      = Math.max(0, invoiceTotalAmount - advanceAmount)
+    const invoiceStatus   = balanceDue === 0 ? 'paid' : 'partially_paid'
+
+    if (existingInvoice) {
+      const { error: invoiceUpdateError } = await supabaseAdmin
+        .from('invoices')
+        .update({
+          paid_amount:     advanceAmount,
+          balance_due:     balanceDue,
+          discount_amount: bookingDiscount,
+          total_amount:    invoiceTotalAmount,  // KEY FIX: reflect discounted total
+          payment_method:  'jazzcash',
+          status:          invoiceStatus,
+          updated_at:      new Date().toISOString(),
+        })
+        .eq('invoice_id', existingInvoice.invoice_id)
+
+      if (invoiceUpdateError) {
+        console.warn('[submit-payment] invoice update failed (non-fatal):', invoiceUpdateError)
+      }
+    } else {
+      const invoiceNo = `INV-${booking.confirmation_no}`
+
+      const { error: invoiceCreateError } = await supabaseAdmin
+        .from('invoices')
+        .insert({
+          booking_id:      bookingId,
+          hotel_id:        booking.hotel_id,
+          guest_id:        booking.guest_id,
+          invoice_no:      invoiceNo,
+          invoice_date:    booking.check_in_date,
+          due_date:        booking.check_in_date,
+          subtotal,
+          discount_amount: bookingDiscount,
+          tax_rate:        taxRate,
+          tax_amount:      taxAmount,
+          total_amount:    invoiceTotalAmount,  // KEY FIX: discounted total
+          paid_amount:     advanceAmount,
+          balance_due:     balanceDue,          // KEY FIX: 0 when discount covers all
+          currency_code:   'PKR',
+          status:          invoiceStatus,
+          payment_method:  'jazzcash',
+          created_at:      new Date().toISOString(),
+          updated_at:      new Date().toISOString(),
+        })
+
+      if (invoiceCreateError) {
+        console.warn('[submit-payment] invoice creation failed (non-fatal):', invoiceCreateError)
+      }
     }
 
     return NextResponse.json({ success: true, screenshotUrl: storagePath })

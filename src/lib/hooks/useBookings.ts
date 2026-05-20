@@ -19,6 +19,17 @@ export interface Booking {
   special_requests: string | null
   loyalty_points_earned: number
   created_at: string
+
+  // ── Payment fields ───────────────────────────────────────────────────
+  payment_method: string | null
+  advance_payment_amount: number | null
+  discount_amount: number | null
+  discount_applied: boolean
+  payment_status: string | null
+  jazzcash_screenshot_url: string | null
+  jazzcash_sender_number: string | null
+  jazzcash_transaction_id: string | null
+
   guest: {
     guest_id: number
     first_name: string
@@ -82,6 +93,7 @@ export async function autoTransitionBookings(): Promise<void> {
       .from('bookings')
       .select('booking_id')
       .eq('booking_status', 'confirmed')
+      .eq('is_deleted', false)
       .lte('check_in_date', today)
       .gt('check_out_date', today)
 
@@ -97,6 +109,7 @@ export async function autoTransitionBookings(): Promise<void> {
       .from('bookings')
       .select('booking_id')
       .eq('booking_status', 'checked_in')
+      .eq('is_deleted', false)
       .lte('check_out_date', today)
 
     if (toCheckOut && toCheckOut.length > 0) {
@@ -111,6 +124,7 @@ export async function autoTransitionBookings(): Promise<void> {
       .from('bookings')
       .select('booking_id')
       .eq('booking_status', 'checked_out')
+      .eq('is_deleted', false)
       .lte('check_in_date', today)
       .gt('check_out_date', today)
 
@@ -122,12 +136,11 @@ export async function autoTransitionBookings(): Promise<void> {
     }
 
     // D) confirmed → checked_out  (both dates passed, never checked in)
-    // NOTE: pending bookings with passed dates are left as-is — admin must
-    // decide to confirm or cancel them manually.
     const { data: missedStay } = await supabase
       .from('bookings')
       .select('booking_id')
       .eq('booking_status', 'confirmed')
+      .eq('is_deleted', false)
       .lt('check_out_date', today)
 
     if (missedStay && missedStay.length > 0) {
@@ -138,13 +151,11 @@ export async function autoTransitionBookings(): Promise<void> {
     }
 
     // ── STEP 2: Reconcile ALL room statuses from scratch ──────────────────
-    // Only checked_in bookings make rooms 'occupied'.
-    // Pending bookings do NOT occupy rooms until confirmed + checked in.
-
     const { data: activeBookingRooms } = await supabase
       .from('bookings')
       .select('booking_rooms(room_id)')
       .eq('booking_status', 'checked_in')
+      .eq('is_deleted', false)
 
     const occupiedRoomIds: number[] = (activeBookingRooms ?? []).flatMap(
       (b: any) => (b.booking_rooms ?? []).map((br: any) => br.room_id)
@@ -208,6 +219,14 @@ export function useBookings(filters: BookingFilters) {
           special_requests,
           loyalty_points_earned,
           created_at,
+          payment_method,
+          advance_payment_amount,
+          discount_amount,
+          discount_applied,
+          payment_status,
+          jazzcash_screenshot_url,
+          jazzcash_sender_number,
+          jazzcash_transaction_id,
           guests!inner (
             guest_id,
             first_name,
@@ -247,9 +266,9 @@ export function useBookings(filters: BookingFilters) {
             total_amount
           )
         `)
+        .eq('is_deleted', false)
         .order('booking_id', { ascending: false })
 
-      // Status filter — 'all' includes pending too
       if (filters.status && filters.status !== 'all') {
         query = query.eq('booking_status', filters.status)
       }
@@ -267,24 +286,32 @@ export function useBookings(filters: BookingFilters) {
       if (error) throw error
 
       let result = (data ?? []).map((b: any) => ({
-        booking_id:            b.booking_id,
-        confirmation_no:       b.confirmation_no,
-        check_in_date:         b.check_in_date,
-        check_out_date:        b.check_out_date,
-        total_nights:          b.total_nights,
-        adults:                b.adults,
-        children:              b.children,
-        total_amount:          b.total_amount,
-        tax_amount:            b.tax_amount,
-        booking_status:        b.booking_status,
-        booking_source:        b.booking_source,
-        special_requests:      b.special_requests,
-        loyalty_points_earned: b.loyalty_points_earned,
-        created_at:            b.created_at,
-        guest:                 b.guests,
-        hotel:                 b.hotels,
-        channel:               b.channels,
-        rate_plan:             b.room_rate_plans,
+        booking_id:               b.booking_id,
+        confirmation_no:          b.confirmation_no,
+        check_in_date:            b.check_in_date,
+        check_out_date:           b.check_out_date,
+        total_nights:             b.total_nights,
+        adults:                   b.adults,
+        children:                 b.children,
+        total_amount:             b.total_amount,
+        tax_amount:               b.tax_amount,
+        booking_status:           b.booking_status,
+        booking_source:           b.booking_source,
+        special_requests:         b.special_requests,
+        loyalty_points_earned:    b.loyalty_points_earned,
+        created_at:               b.created_at,
+        payment_method:           b.payment_method ?? null,
+        advance_payment_amount:   b.advance_payment_amount ?? null,
+        discount_amount:          b.discount_amount ?? null,
+        discount_applied:         b.discount_applied ?? false,
+        payment_status:           b.payment_status ?? null,
+        jazzcash_screenshot_url:  b.jazzcash_screenshot_url ?? null,
+        jazzcash_sender_number:   b.jazzcash_sender_number ?? null,
+        jazzcash_transaction_id:  b.jazzcash_transaction_id ?? null,
+        guest:                    b.guests,
+        hotel:                    b.hotels,
+        channel:                  b.channels,
+        rate_plan:                b.room_rate_plans,
         booking_rooms: (b.booking_rooms ?? []).map((br: any) => ({
           room_id:        br.room_id,
           rate_per_night: br.rate_per_night,
@@ -322,7 +349,6 @@ export function useBookings(filters: BookingFilters) {
     }
   }, [filters])
 
-  // On mount: run auto-transition (skips pending) then fetch
   useEffect(() => {
     autoTransitionBookings().then(() => fetchBookings())
   }, [fetchBookings])
@@ -337,8 +363,6 @@ export function useBooking(id: number) {
 
   useEffect(() => {
     const fetchBooking = async () => {
-      // Only run auto-transition on non-pending bookings (safe — function
-      // internally excludes pending from any status changes)
       await autoTransitionBookings()
 
       try {
@@ -360,6 +384,14 @@ export function useBooking(id: number) {
             special_requests,
             loyalty_points_earned,
             created_at,
+            payment_method,
+            advance_payment_amount,
+            discount_amount,
+            discount_applied,
+            payment_status,
+            jazzcash_screenshot_url,
+            jazzcash_sender_number,
+            jazzcash_transaction_id,
             guests (
               guest_id,
               first_name,
@@ -401,29 +433,38 @@ export function useBooking(id: number) {
             )
           `)
           .eq('booking_id', id)
+          .eq('is_deleted', false)
           .single()
 
         if (error) throw error
 
         setBooking({
-          booking_id:            data.booking_id,
-          confirmation_no:       data.confirmation_no,
-          check_in_date:         data.check_in_date,
-          check_out_date:        data.check_out_date,
-          total_nights:          data.total_nights,
-          adults:                data.adults,
-          children:              data.children,
-          total_amount:          data.total_amount,
-          tax_amount:            data.tax_amount,
-          booking_status:        data.booking_status,
-          booking_source:        data.booking_source,
-          special_requests:      data.special_requests,
-          loyalty_points_earned: data.loyalty_points_earned,
-          created_at:            data.created_at,
-          guest:                 data.guests as any,
-          hotel:                 data.hotels as any,
-          channel:               data.channels as any,
-          rate_plan:             data.room_rate_plans as any,
+          booking_id:               data.booking_id,
+          confirmation_no:          data.confirmation_no,
+          check_in_date:            data.check_in_date,
+          check_out_date:           data.check_out_date,
+          total_nights:             data.total_nights,
+          adults:                   data.adults,
+          children:                 data.children,
+          total_amount:             data.total_amount,
+          tax_amount:               data.tax_amount,
+          booking_status:           data.booking_status,
+          booking_source:           data.booking_source,
+          special_requests:         data.special_requests,
+          loyalty_points_earned:    data.loyalty_points_earned,
+          created_at:               data.created_at,
+          payment_method:           (data as any).payment_method ?? null,
+          advance_payment_amount:   (data as any).advance_payment_amount ?? null,
+          discount_amount:          (data as any).discount_amount ?? null,
+          discount_applied:         (data as any).discount_applied ?? false,
+          payment_status:           (data as any).payment_status ?? null,
+          jazzcash_screenshot_url:  (data as any).jazzcash_screenshot_url ?? null,
+          jazzcash_sender_number:   (data as any).jazzcash_sender_number ?? null,
+          jazzcash_transaction_id:  (data as any).jazzcash_transaction_id ?? null,
+          guest:                    data.guests as any,
+          hotel:                    data.hotels as any,
+          channel:                  data.channels as any,
+          rate_plan:                data.room_rate_plans as any,
           booking_rooms: (data.booking_rooms ?? []).map((br: any) => ({
             room_id:        br.room_id,
             rate_per_night: br.rate_per_night,

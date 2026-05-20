@@ -242,6 +242,7 @@ export async function getGuestAccountSnapshot(userEmail: string | null) {
     .from('bookings')
     .select('booking_id, confirmation_no, booking_status, check_in_date, check_out_date, total_nights, total_amount, hotels(hotel_name, city)')
     .eq('guest_id', guest.guest_id)
+    .eq('is_deleted', false)  // ← only show non-deleted bookings
     .order('check_in_date', { ascending: false })
 
   const bookingRows = bookings ?? []

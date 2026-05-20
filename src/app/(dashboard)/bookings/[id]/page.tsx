@@ -96,10 +96,19 @@ export default function BookingDetailPage() {
   }
 
   const vip = vipColors[booking.guest?.vip_status as keyof typeof vipColors] ?? vipColors.none
-  const bookingTotalPay = Number(booking.total_amount ?? 0)
-  const rawPaid         = Number(booking.paid_amount ?? 0)
-  const paidDisplay     = bookingTotalPay > 0 ? Math.min(rawPaid, bookingTotalPay) : rawPaid
-  const balanceLeft     = Math.max(0, bookingTotalPay - paidDisplay)
+
+  // ── Payment maths ──────────────────────────────────────────────────────
+  // total_amount is already the discounted canonical total (updated by submit-payment)
+  const bookingTotal    = Number(booking.total_amount ?? 0)
+  const discountAmount  = Number(booking.discount_amount ?? 0)
+  const paidAmount      = Number(booking.advance_payment_amount ?? booking.paid_amount ?? 0)
+  const paidDisplay     = bookingTotal > 0 ? Math.min(paidAmount, bookingTotal) : paidAmount
+  const balanceLeft     = Math.max(0, bookingTotal - paidDisplay)
+  // Room charges shown to user = total before discount and tax
+  // original subtotal (pre-discount) = current total + discount + tax
+  const taxAmount       = Number(booking.tax_amount ?? 0)
+  const originalSubtotal = bookingTotal - taxAmount + discountAmount // pre-discount room charges
+  const isPaid          = paidDisplay > 0 && balanceLeft === 0
 
   // Match both legacy 'pending' and current 'pending_approval'
   const isPending =
@@ -329,33 +338,57 @@ export default function BookingDetailPage() {
               <Receipt className="w-5 h-5 text-azure-500" /> Payment Summary
             </h2>
             <div className="space-y-3">
+
+              {/* Room charges — show pre-discount figure so staff can see the original */}
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Room charges</span>
-                <span className="font-semibold text-slate-800">{formatCurrency(booking.total_amount - booking.tax_amount)}</span>
+                <span className="font-semibold text-slate-800">{formatCurrency(originalSubtotal)}</span>
               </div>
+
+              {/* Tax */}
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Tax (16%)</span>
-                <span className="font-semibold text-slate-800">{formatCurrency(booking.tax_amount)}</span>
+                <span className="font-semibold text-slate-800">{formatCurrency(taxAmount)}</span>
               </div>
+
+              {/* Discount line — only shown when a discount was applied */}
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-emerald-600 font-medium">Online discount (10%)</span>
+                  <span className="font-semibold text-emerald-600">− {formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+
+              {/* Total — this is the canonical post-discount total */}
               <div className="border-t border-slate-100 pt-3 flex justify-between">
                 <span className="font-bold text-slate-900">Total</span>
-                <span className="font-bold text-xl text-slate-900">{formatCurrency(booking.total_amount)}</span>
+                <span className="font-bold text-xl text-slate-900">{formatCurrency(bookingTotal)}</span>
               </div>
-              {bookingTotalPay > 0 && (
+
+              {/* Collected & balance — only shown when a payment was made */}
+              {paidDisplay > 0 && (
                 <>
                   <div className="flex justify-between text-sm pt-2">
                     <span className="text-slate-500">Collected</span>
                     <span className="font-semibold text-emerald-700">{formatCurrency(paidDisplay)}</span>
                   </div>
-                  {balanceLeft > 0 && (
+
+                  {/* Balance due — hidden when fully settled */}
+                  {balanceLeft > 0 ? (
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500">Balance due</span>
                       <span className="font-semibold text-amber-700">{formatCurrency(balanceLeft)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Balance due</span>
+                      <span className="font-semibold text-emerald-600">PKR 0 — Settled ✓</span>
                     </div>
                   )}
                 </>
               )}
             </div>
+
             {booking.rate_plan && (
               <div className="mt-4 p-3 rounded-xl bg-azure-50 border border-azure-100">
                 <p className="text-xs text-azure-600 font-semibold mb-0.5">Rate Plan</p>
